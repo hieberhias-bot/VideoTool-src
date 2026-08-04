@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 import time
 import random
 from io import IOHandler
@@ -46,7 +46,7 @@ class InteractionHandlerInterface:
         """
         self.send_mouse_left_down()
         self.__sleep_random_delay(delay_min_s, delay_max_s)
-        self.send_mouse_left_down()
+        self.send_mouse_left_up()
 
     def send_mouse_move(self, x: int, y: int):
         raise NotImplementedError
@@ -185,3 +185,4 @@ class DirectInputHandler(InteractionHandlerInterface):
             key (str): Key to release
         """
         pydirectinput.keyUp(key)
+
