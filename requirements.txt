@@ -1,0 +1,6 @@
+dxcam ; os_name == 'nt'
+opencv-python
+pydirectinput
+pyserial
+pywin32 ; os_name == 'nt'
+mss ; os_name == 'posix'
