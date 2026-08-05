@@ -598,3 +598,87 @@ class SequenzManager:
         except Exception as e:
             self._log("Fehler beim Abspielen von '%s': %s" % (ablauf_name, e))
             return False
+
+
+# =====================================================================
+#  Pool: mehrere Sequenzen gleichzeitig laufen lassen
+# =====================================================================
+class SequenzPool:
+    """Verwaltet beliebig viele parallel laufende Sequenzen.
+
+    Jeder Lauf bekommt eine eigene ID und einen eigenen SequenzManager
+    (mit eigenem Thread, Pause- und Stop-Steuerung). Die Datei-Methoden
+    (laden/speichern/...) bleiben beim einzelnen SequenzManager.
+
+    Hinweis: Es gibt nur EINEN Mauszeiger - Sequenzen, die gleichzeitig
+    klicken, stoeren sich physisch. Sinnvoll v.a. bei trigger-lastigen
+    Sequenzen, die meist nur warten.
+    """
+
+    def __init__(self, basis_dir=None, log_callback=None, status_callback=None):
+        self.basis_dir = basis_dir or BASE_DIR
+        self.log_callback = log_callback
+        # status_callback(run_id, name, schritt_idx, gesamt, durchlauf)
+        self.status_callback = status_callback
+        self._runs = {}       # run_id -> {"mgr": SequenzManager, "name": str}
+        self._counter = 0
+
+    def _log(self, rid, msg):
+        if self.log_callback:
+            try:
+                self.log_callback("[#%d] %s" % (rid, msg))
+            except Exception:
+                pass
+
+    def _status(self, rid, name, idx, gesamt, durchlauf):
+        # Abschluss-Signal (idx==0 und durchlauf==0): Lauf entfernen
+        if idx == 0 and durchlauf == 0:
+            self._runs.pop(rid, None)
+        if self.status_callback:
+            try:
+                self.status_callback(rid, name, idx, gesamt, durchlauf)
+            except Exception:
+                pass
+
+    def start(self, sequenz):
+        """Startet eine (Kopie der) Sequenz als neuen Lauf. Gibt run_id zurueck."""
+        if not sequenz or not sequenz.schritte:
+            return None
+        self._counter += 1
+        rid = self._counter
+        # Tiefe Kopie, damit spaetere GUI-Aenderungen den Lauf nicht beeinflussen
+        seq = Sequenz.from_dict(sequenz.to_dict())
+        mgr = SequenzManager(
+            self.basis_dir,
+            log_callback=(lambda m, r=rid: self._log(r, m)),
+            status_callback=(lambda n, i, g, d, r=rid: self._status(r, n, i, g, d)))
+        if not mgr.start(seq):
+            self._counter -= 1
+            return None
+        self._runs[rid] = {"mgr": mgr, "name": seq.name}
+        return rid
+
+    def pause(self, rid):
+        r = self._runs.get(rid)
+        if r:
+            r["mgr"].pause()
+
+    def stop(self, rid, hart=False):
+        r = self._runs.get(rid)
+        if r:
+            r["mgr"].stop(hart=hart)
+
+    def stop_all(self, hart=True):
+        for r in list(self._runs.values()):
+            r["mgr"].stop(hart=hart)
+
+    def aktive(self):
+        """Liste aktiver Laeufe: [{run_id, name, pausiert}] nach ID sortiert."""
+        result = []
+        for rid, v in sorted(self._runs.items()):
+            result.append({"run_id": rid, "name": v["name"],
+                           "pausiert": v["mgr"].pausiert})
+        return result
+
+    def anzahl(self):
+        return len(self._runs)

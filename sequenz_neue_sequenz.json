@@ -1,0 +1,45 @@
+{
+  "name": "neue_sequenz",
+  "schleife_endlos": false,
+  "schleife_x": 1,
+  "erstellt": "2026-08-05 12:10:56",
+  "geaendert": "2026-08-05 12:10:56",
+  "schritte": [
+    {
+      "typ": "TRIGGER",
+      "name": "dw",
+      "wert": "dw",
+      "warte_ms": 0,
+      "zufall_ms": 0,
+      "goto_step": -1,
+      "goto_bedingung": "fehler"
+    },
+    {
+      "typ": "ABLAUF",
+      "name": "TEST",
+      "wert": "TEST",
+      "warte_ms": 0,
+      "zufall_ms": 0,
+      "goto_step": -1,
+      "goto_bedingung": "fehler"
+    },
+    {
+      "typ": "ABLAUF",
+      "name": "testlauf1",
+      "wert": "testlauf1",
+      "warte_ms": 0,
+      "zufall_ms": 0,
+      "goto_step": -1,
+      "goto_bedingung": "fehler"
+    },
+    {
+      "typ": "ABLAUF",
+      "name": "fisch",
+      "wert": "fisch",
+      "warte_ms": 0,
+      "zufall_ms": 0,
+      "goto_step": -1,
+      "goto_bedingung": "fehler"
+    }
+  ]
+}
