@@ -3,7 +3,7 @@ import random
 import logging
 from typing import Optional, Tuple, Callable
 
-from config import ToolConfig
+from tool_config import ToolConfig
 
 _logger = logging.getLogger("CatchTrigger")
 

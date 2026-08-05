@@ -1,4 +1,5 @@
-﻿#!/usr/bin/env python3
+import threading
+#!/usr/bin/env python3
 """Bot Command Center - zentrale Steuerungs-App mit Ablauf-Editor"""
 
 import os, sys, json, time, subprocess, threading, random, copy
@@ -989,88 +990,66 @@ class CommandCenter:
     def _fenster_erfassen(self):
         if not FENSTER_OK:
             messagebox.showinfo("Hinweis",
-                                "Fenster-Erkennung ist nur unter Windows verfuegbar.\n"
-                                "Ohne sie werden Klicks absolut gespeichert.")
+                "Fenster-Modul nicht verfuegbar. Nutze absolute Koordinaten.")
             return
-        try:
-            from pynput import mouse
-        except ImportError:
-            messagebox.showerror("Fehler", "pynput ist nicht installiert (pip install pynput).")
+        if self._rec_listener is not None:
             return
-        self.lbl_rec_status.config(text="Klicke jetzt in das ZIELFENSTER...", foreground="#f9e2af")
-        self._log_fish("Fenster erfassen: bitte einmal ins Zielfenster klicken.")
-
-        def on_click(x, y, button, pressed):
-            if pressed and getattr(button, "name", "") == "left":
-                info = fenster_util.fenster_unter_cursor()
-                self.root.after(0, lambda: self._fenster_erfasst(info))
-                return False  # Listener nach erstem Klick beenden
-
-        self._erfass_listener = mouse.Listener(on_click=on_click)
-        self._erfass_listener.start()
-
-    def _fenster_erfasst(self, info):
-        self._erfass_listener = None
-        if not info or not info.get("w"):
-            self.lbl_rec_status.config(text="Kein Fenster erkannt", foreground="#f38ba8")
-            self._log_fish("Kein Fenster erkannt - bitte erneut versuchen.")
+        # Automatische Suche nach Metin2-Fenster (kein Klick noetig)
+        such = self.trig_fenster.get().strip() or "Metin2"
+        info = fenster_util.fenster_finden(such)
+        if not info:
+            self.lbl_rec_status.config(
+                text="Fenster '%s' nicht gefunden - ist es offen?" % such,
+                foreground="#f38ba8")
+            self._log_fish("Fenster '%s' nicht gefunden." % such)
             return
-        self.erfasstes_fenster = info
-        titel = info.get("titel") or "(ohne Titel)"
-        # Stabilen Such-Titel vorschlagen. Bei VirtualBox wechselt der volle
-        # Titel ("<VM> [wird ausgefuehrt] - Oracle VirtualBox") -> nur VM-Name.
-        such = titel
-        if "VirtualBox" in titel:
-            such = titel.split(" [")[0].split(" - ")[0].strip() or titel
-        self.trig_fenster.delete(0, "end")
-        self.trig_fenster.insert(0, such[:40])
-        hinweis = "  (Titel wird zum Wiederfinden genutzt - Feld anpassbar)"
-        self.lbl_fenster.config(
-            text="Erfasst: '%s'  [%dx%d @ %d,%d]%s"
-            % (titel[:28], info["w"], info["h"], info["x"], info["y"], hinweis),
-            foreground="#a6e3a1")
-        self.lbl_rec_status.config(text="Fenster erfasst - jetzt '2. Aufnehmen'", foreground="#a6e3a1")
-        self._log_fish("Fenster erfasst: '%s' (%dx%d @ %d,%d)"
-                       % (titel, info["w"], info["h"], info["x"], info["y"]))
+        self._fenster_erfasst({"titel": such, **info})
 
-    # --- Aufnahme (global, ueber pynput) ---
     def _rec_start(self):
+        self._log_fish('DEBUG: _rec_start aufgerufen')
         if BotStatus.aufnahme_laeuft:
+            self._log_fish('DEBUG: laeuft schon, return')
             return
-        try:
-            from pynput import mouse
-        except ImportError:
-            messagebox.showerror("Fehler", "pynput ist nicht installiert (pip install pynput).")
-            return
-        # Zielfenster-Position frisch holen (Fenster koennte verschoben sein)
+        # Zielfenster-Position frisch holen
         if self.erfasstes_fenster and FENSTER_OK:
             such = self.trig_fenster.get().strip()
             neu = fenster_util.fenster_finden(such) if such else None
             if neu:
-                self.erfasstes_fenster = {"titel": such,
-                                          "x": neu["x"], "y": neu["y"],
-                                          "w": neu["w"], "h": neu["h"]}
-                self._log_fish("Zielfenster '%s' aktualisiert @ %d,%d (%dx%d)"
-                               % (such, neu["x"], neu["y"], neu["w"], neu["h"]))
+                self.erfasstes_fenster = {'titel': such,
+                                          'x': neu['x'], 'y': neu['y'],
+                                          'w': neu['w'], 'h': neu['h']}
+                self._log_fish('Zielfenster %s aktualisiert @ %d,%d (%dx%d)'
+                               % (such, neu['x'], neu['y'], neu['w'], neu['h']))
             else:
-                self._log_fish("Zielfenster '%s' nicht gefunden - nutze erfasste Position." % such)
+                self._log_fish('Zielfenster %s nicht gefunden - nutze erfasste Position.' % such)
         BotStatus.aufnahme_laeuft = True
         self.aufnahme_events = []
         self.aufnahme_letzter_zeit = time.time()
-        self.btn_rec_start.config(state="disabled")
-        self.btn_rec_stop.config(state="normal")
-        self.btn_fenster_erfassen.config(state="disabled")
+        self.btn_rec_start.config(state='disabled')
+        self.btn_rec_stop.config(state='normal')
+        self.btn_fenster_erfassen.config(state='disabled')
         if self.erfasstes_fenster:
             self.lbl_rec_status.config(
-                text="AUFNAHME... Klicke im Fenster '%s'!" % (self.erfasstes_fenster.get("titel") or "?")[:20],
-                foreground="#f38ba8")
+                text='AUFNAHME... Klicke im Fenster %s!' % (self.erfasstes_fenster.get('titel') or '?')[:20],
+                foreground='#f38ba8')
         else:
-            self.lbl_rec_status.config(text="AUFNAHME (absolut)... Klicke ins Spiel!",
-                                       foreground="#f38ba8")
-        self.detail_liste.delete(0, "end")
-        self._log_fish("Aufnahme gestartet - klicke die Aktionen aus.")
-        self._rec_listener = mouse.Listener(on_click=self._on_global_click)
-        self._rec_listener.start()
+            self.lbl_rec_status.config(text='AUFNAHME (absolut)... Klicke ins Spiel!',
+                                       foreground='#f38ba8')
+        self.detail_liste.delete(0, 'end')
+        self._log_fish('Aufnahme gestartet - klicke die Aktionen aus.')
+        # COM4 statt pynput (umgeht UIPI)
+        if not self._rec_com4_start():
+            # Fallback: pynput
+            try:
+                from pynput import mouse
+                self._rec_listener = mouse.Listener(on_click=self._on_global_click)
+                self._rec_listener.start()
+            except Exception:
+                BotStatus.aufnahme_laeuft = False
+                self.btn_rec_start.config(state='normal')
+                self.btn_rec_stop.config(state='disabled')
+                messagebox.showerror('Fehler', 'Weder COM4 noch pynput verfuegbar.')
+
 
     def _on_global_click(self, x, y, button, pressed):
         # laeuft im pynput-Thread -> nur Daten sammeln, GUI via after()
@@ -1118,6 +1097,7 @@ class CommandCenter:
             except Exception:
                 pass
             self._rec_listener = None
+        self._rec_com4_stop_listener()
         self.btn_rec_start.config(state="normal")
         self.btn_rec_stop.config(state="disabled")
         self.btn_fenster_erfassen.config(state="normal")
@@ -1162,6 +1142,69 @@ class CommandCenter:
             self._refresh_vorstart_ablaeufe()
         except Exception as e:
             messagebox.showerror("Fehler", "Konnte nicht speichern: %s" % e)
+
+
+    # --- COM4 Klick-Erkennung (ersetzt pynput, umgeht UIPI) ---
+    def _rec_com4_start(self):
+        try:
+            import serial
+        except ImportError:
+            messagebox.showerror('Fehler', 'pyserial nicht installiert (pip install pyserial).')
+            return False
+        port = 'COM4'  # HART auf COM4 - Arduino-Klick-Erkennung
+        try:
+            self._rec_ser = serial.Serial(port, 115200, timeout=0.1)
+            self._rec_ser.setDTR(False)
+            self._rec_ser.setRTS(False)
+        except Exception as e:
+            messagebox.showerror('COM4', 'Konnte %s nicht oeffnen: %s' % (port, e))
+            return False
+        self._rec_com4_stop = False
+        self._rec_com4_thread = threading.Thread(target=self._rec_com4_loop, daemon=True)
+        self._rec_com4_thread.start()
+        self._log_fish('COM4-Klick-Erkennung aktiv auf %s' % port)
+        return True
+
+    def _rec_com4_loop(self):
+        import serial
+        while not getattr(self, '_rec_com4_stop', False):
+            try:
+                line = self._rec_ser.readline()
+            except Exception:
+                break
+            if not line:
+                continue
+            txt = line.decode(errors='ignore').strip()
+            if txt == 'CLICK':
+                # Klick im COM4-Thread -> GUI via after()
+                try:
+                    self.root.after(0, self._rec_com4_klick)
+                except Exception:
+                    pass
+
+    def _rec_com4_klick(self):
+        if not BotStatus.aufnahme_laeuft:
+            return
+        try:
+            import pyautogui
+            x, y = pyautogui.position()
+        except Exception:
+            x, y = 0, 0
+        win = self.erfasstes_fenster
+        if win:
+            rx, ry = x - win['x'], y - win['y']
+        else:
+            rx, ry = x, y
+        self._rec_add_click(rx, ry, x, y)
+
+    def _rec_com4_stop_listener(self):
+        self._rec_com4_stop = True
+        if getattr(self, '_rec_ser', None):
+            try:
+                self._rec_ser.close()
+            except Exception:
+                pass
+            self._rec_ser = None
 
     def _play(self):
         sel = self.ablauf_liste.curselection()
@@ -1506,5 +1549,32 @@ def main():
     CommandCenter(root)
     root.mainloop()
 
+def _report_callback(exc, val, tb):
+    with open("tk_error.log", "a") as f:
+        f.write("".join(traceback.format_exception(exc, val, tb)))
+        f.write("\n---\n")
+
 if __name__ == "__main__":
+    import tkinter as tk
+    try:
+        from tkinter import Tk
+        Tk.report_callback_exception = _report_callback
+    except Exception:
+        pass
     main()
+
+
+def _ensure_admin():
+    import ctypes, sys, os
+    try:
+        if ctypes.windll.shell32.IsUserAnAdmin():
+            return True
+    except:
+        return True
+    script = os.path.abspath(sys.argv[0]) if sys.argv and os.path.exists(sys.argv[0]) else os.path.abspath(__file__)
+    ctypes.windll.shell32.ShellExecuteW(None, 'runas', sys.executable, '"%s"' % script, None, 1)
+    return False
+
+if __name__ == '__main__':
+    if not _ensure_admin():
+        sys.exit()

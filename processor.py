@@ -6,7 +6,7 @@ from screen import GeneralCapture
 from image_utils import (get_image_template, detect_dark_object, detect_circle,
                          overlay_image, hsv_mask, clean_mask)
 import math
-from config import ToolConfig
+from tool_config import ToolConfig
 from fish_tracker import FishTracker
 from fish_detector import FishDetector
 from catch_trigger import CatchTrigger
@@ -432,6 +432,8 @@ def main():
 
         while 1:
             frame, x, y = wnd_capture.get_screenshot()
+            if frame is None:
+                continue
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             if frame is not None:
                 if not __show_preview(frame, fish_vision):

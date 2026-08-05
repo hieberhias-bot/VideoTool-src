@@ -1,0 +1,22 @@
+{
+  "name": "einlog",
+  "fenster": {
+    "titel": "Bot Command Center",
+    "x": 855,
+    "y": 6,
+    "w": 1116,
+    "h": 797
+  },
+  "fenster_relativ": true,
+  "erstellt": "2026-08-05 13:09:57",
+  "events": [
+    {
+      "typ": "click",
+      "x": 400,
+      "y": 213,
+      "zeit_bis_naechster_ms": 16645,
+      "zufall_ms": 0,
+      "pixel_unscharfe": 3
+    }
+  ]
+}

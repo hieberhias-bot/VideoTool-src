@@ -1,7 +1,7 @@
-﻿import logging
+import logging
 import time
 import random
-from io import IOHandler
+from io_handler import IOHandler  # lokale io.py
 import struct
 import win32api
 import pydirectinput

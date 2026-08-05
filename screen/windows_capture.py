@@ -1,4 +1,5 @@
 import win32gui
+import win32api
 import dxcam
 import numpy as np
 from screen.capture_interface import WindowCapture
@@ -19,8 +20,8 @@ class WindowsCapture(WindowCapture):
 
     def get_screenshot(self) -> tuple[np.ndarray, int, int]:
         window_rect = win32gui.GetWindowRect(self.hwnd)
-        screen_width = win32gui.GetSystemMetrics(0)
-        screen_height = win32gui.GetSystemMetrics(1)
+        screen_width = win32api.GetSystemMetrics(0)
+        screen_height = win32api.GetSystemMetrics(1)
 
         start_x = min(screen_width, max(0, window_rect[0]))
         start_y = min(screen_height, max(0, window_rect[1]))

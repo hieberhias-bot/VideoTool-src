@@ -1,4 +1,4 @@
-﻿# config.py - Zentrale Einstellungen
+# config.py - Zentrale Einstellungen
 import json, os
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "tool_config.json")
@@ -33,7 +33,7 @@ DEFAULT_CONFIG = {
 
 def lade_config():
     if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+        with open(CONFIG_FILE, "r", encoding="utf-8-sig") as f:
             cfg = json.load(f)
         # Defaults ergänzen
         for k, v in DEFAULT_CONFIG.items():
@@ -42,6 +42,19 @@ def lade_config():
     return dict(DEFAULT_CONFIG)
 
 def speichere_config(cfg):
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+    with open(CONFIG_FILE, "w", encoding="utf-8-sig") as f:
         json.dump(cfg, f, indent=4, ensure_ascii=False)
 
+
+
+
+
+class ToolConfig:
+    CONFIG_FILE = CONFIG_FILE
+    DEFAULT_CONFIG = DEFAULT_CONFIG
+
+    def __init__(self):
+        self.config = lade_config()
+
+    def get(self, key, default=None):
+        return self.config.get(key, default)

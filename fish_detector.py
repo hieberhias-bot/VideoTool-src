@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 import cv2
 import numpy as np
 
-from config import ToolConfig
+from tool_config import ToolConfig
 from image_utils import clean_mask
 
 _logger = logging.getLogger("FishDetector")

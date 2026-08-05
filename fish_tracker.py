@@ -2,7 +2,7 @@ import math
 import logging
 from typing import Optional, Tuple
 
-from config import ToolConfig
+from tool_config import ToolConfig
 
 _logger = logging.getLogger("FishTracker")
 
