@@ -997,14 +997,29 @@ class CommandCenter:
         except ImportError:
             messagebox.showerror("Fehler", "pynput ist nicht installiert (pip install pynput).")
             return
-        self.lbl_rec_status.config(text="Klicke jetzt in das ZIELFENSTER...", foreground="#f9e2af")
-        self._log_fish("Fenster erfassen: bitte einmal ins Zielfenster klicken.")
+        # eigenes Fenster ermitteln, damit es beim Erfassen ignoriert wird
+        try:
+            self._eigenes_hwnd = fenster_util.root_von(self.root.winfo_id())
+        except Exception:
+            self._eigenes_hwnd = None
+        self.lbl_rec_status.config(text="Klicke jetzt in das ZIELFENSTER (z.B. METIN2)...",
+                                   foreground="#f9e2af")
+        self._log_fish("Fenster erfassen: bitte EINMAL ins Spiel-/Zielfenster klicken "
+                       "(NICHT ins Command Center).")
 
         def on_click(x, y, button, pressed):
-            if pressed and getattr(button, "name", "") == "left":
-                info = fenster_util.fenster_unter_cursor()
-                self.root.after(0, lambda: self._fenster_erfasst(info))
-                return False  # Listener nach erstem Klick beenden
+            if not (pressed and getattr(button, "name", "") == "left"):
+                return
+            info = fenster_util.fenster_unter_cursor()
+            # eigenes Fenster ignorieren -> weiter lauschen
+            if info and (info.get("hwnd") == self._eigenes_hwnd
+                         or (info.get("titel") or "") == self.root.title()):
+                self.root.after(0, lambda: self.lbl_rec_status.config(
+                    text="Das war das Command Center - bitte das SPIEL-Fenster anklicken!",
+                    foreground="#f38ba8"))
+                return  # Listener laeuft weiter
+            self.root.after(0, lambda: self._fenster_erfasst(info))
+            return False  # nach gueltigem Klick beenden
 
         self._erfass_listener = mouse.Listener(on_click=on_click)
         self._erfass_listener.start()

@@ -99,6 +99,16 @@ if _WIN:
                 return _info(hwnd)
         return _info(treffer[0]) if treffer else None
 
+    def root_von(hwnd):
+        """Top-Level-Fenster (GA_ROOT) zu einem beliebigen Fenster-Handle."""
+        try:
+            return int(user32.GetAncestor(wintypes.HWND(hwnd), GA_ROOT) or hwnd)
+        except Exception:
+            try:
+                return int(hwnd)
+            except Exception:
+                return None
+
     def alle_fenster():
         """Liste aller sichtbaren Top-Level-Fenster mit Titel und Groesse."""
         ergebnis = []
@@ -127,6 +137,12 @@ else:  # Nicht-Windows: Fallback
         return None
 
     def fenster_finden(titel_teil):
+        return None
+
+    def alle_fenster():
+        return []
+
+    def root_von(hwnd):
         return None
 
     verfuegbar = False
