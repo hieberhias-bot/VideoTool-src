@@ -37,6 +37,16 @@ except Exception:
     FENSTER_OK = False
     fenster_util = None
 
+# HID-Maus (serielles Text-Protokoll) - optional, App laeuft auch ohne
+try:
+    from hid_maus import HidMaus
+    HID_OK = True
+    HID_IMPORT_ERR = None
+except Exception as _hid_err:
+    HID_OK = False
+    HID_IMPORT_ERR = _hid_err
+    HidMaus = None
+
 
 class BotStatus:
     fishbot_laeuft = False
@@ -279,11 +289,47 @@ class CommandCenter:
         self.erfasstes_fenster = None   # {"titel","x","y","w","h"} oder None
         self._rec_listener = None       # pynput-Listener waehrend Aufnahme
         self._erfass_listener = None    # pynput-Listener beim Fenster-Erfassen
+        # HID-Maus (serielles Text-Protokoll)
+        self.hid_maus = None            # HidMaus-Instanz oder None
+        self.hid_port = "COM6"          # Standard-Port fuer die HID-Maus
 
         self._setup_style()
         self._setup_tabs()
+        self._hid_maus_init()
         self._setup_statusbar()
         self._update_status()
+
+    def _hid_maus_init(self):
+        """Instanziiert die HID-Maus beim Start - nur wenn ein Port gesetzt ist.
+
+        Schlaegt die Verbindung fehl (Geraet nicht vorhanden, Port belegt),
+        bleibt ``self.hid_maus`` auf ``None`` und die App laeuft normal weiter.
+        """
+        if not HID_OK:
+            self._log_fish("HID-Maus-Modul nicht verfuegbar: %s" % HID_IMPORT_ERR)
+            return
+        # Port bevorzugt aus dem Config-Feld, sonst der Standardwert
+        if hasattr(self, "hid_port_entry"):
+            port = self.hid_port_entry.get().strip()
+        else:
+            port = (self.hid_port or "").strip()
+        if not port:
+            self._log_fish("Kein HID-Maus-Port gesetzt - HID-Maus deaktiviert.")
+            return
+        try:
+            self.hid_maus = HidMaus(port)
+            self.hid_port = port
+            self._log_fish("HID-Maus verbunden auf %s." % port)
+            self._set_hid_status("Verbunden (%s)" % port, "#a6e3a1")
+        except ConnectionError as e:
+            self.hid_maus = None
+            self._log_fish("HID-Maus nicht verbunden (%s): %s" % (port, e))
+            self._set_hid_status("Nicht verbunden", "#f38ba8")
+
+    def _set_hid_status(self, text, farbe):
+        """Aktualisiert die HID-Status-Anzeige im Config-Tab (falls vorhanden)."""
+        if hasattr(self, "lbl_hid_status"):
+            self.lbl_hid_status.config(text=text, foreground=farbe)
 
     def _setup_style(self):
         style = ttk.Style()
@@ -1123,6 +1169,14 @@ class CommandCenter:
         else:
             self._log_fish("Klick %d: (%d, %d) Warte: %dms" % (n, rx, ry, zeit_abstand))
 
+        # Klick zusaetzlich ueber die HID-Maus ausloesen (falls verbunden)
+        if self.hid_maus:
+            try:
+                if not self.hid_maus.klick_links():
+                    self._log_fish("HID-Maus: keine Klick-Bestaetigung erhalten.")
+            except ConnectionError as e:
+                self._log_fish("HID-Maus Fehler beim Klick: %s" % e)
+
     def _rec_stop(self):
         if not BotStatus.aufnahme_laeuft:
             return
@@ -1137,6 +1191,13 @@ class CommandCenter:
         self.btn_rec_stop.config(state="disabled")
         self.btn_fenster_erfassen.config(state="normal")
         self.lbl_rec_status.config(text="Bereit", foreground="#a6adc8")
+
+        # HID-Maus-Verbindung nach der Aufnahme schliessen
+        if self.hid_maus:
+            self.hid_maus.schliessen()
+            self.hid_maus = None
+            self._log_fish("HID-Maus getrennt (Aufnahme beendet).")
+            self._set_hid_status("Nicht verbunden", "#f38ba8")
 
         if not self.aufnahme_events:
             self._log_fish("Keine Events aufgenommen.")
@@ -1455,6 +1516,25 @@ class CommandCenter:
         self.lbl_ard_status = ttk.Label(ard, text="Nicht verbunden", foreground="#f38ba8")
         self.lbl_ard_status.grid(row=0, column=3, padx=10)
 
+        # HID-Maus (serielles Text-Protokoll, Klick-Bestaetigung)
+        hid = ttk.LabelFrame(frame, text="HID-Maus (serielles Text-Protokoll)")
+        hid.pack(fill="x", padx=20, pady=10)
+
+        ttk.Label(hid, text="Port:").grid(row=0, column=0, padx=10, pady=8)
+        self.hid_port_entry = ttk.Entry(hid, width=12)
+        self.hid_port_entry.grid(row=0, column=1, padx=5)
+        self.hid_port_entry.insert(0, self.hid_port or "COM6")
+
+        ttk.Button(hid, text="Verbinden", command=self._hid_verbinden).grid(row=0, column=2, padx=(10, 3))
+        ttk.Button(hid, text="Trennen", command=self._hid_trennen).grid(row=0, column=3, padx=3)
+        # Status spiegelt eine evtl. schon beim Start aufgebaute Verbindung
+        if self.hid_maus:
+            start_txt, start_farbe = "Verbunden (%s)" % self.hid_port, "#a6e3a1"
+        else:
+            start_txt, start_farbe = "Nicht verbunden", "#f38ba8"
+        self.lbl_hid_status = ttk.Label(hid, text=start_txt, foreground=start_farbe)
+        self.lbl_hid_status.grid(row=0, column=4, padx=10)
+
         einst = ttk.LabelFrame(frame, text="Einstellungen (ToolConfig)")
         einst.pack(fill="both", expand=True, padx=20, pady=10)
         self.config_text = scrolledtext.ScrolledText(einst, height=10,
@@ -1483,6 +1563,39 @@ class CommandCenter:
         except Exception as e:
             messagebox.showwarning("Arduino", "Nicht verbunden: %s\nSoftware-Modus aktiv." % e)
             self.lbl_ard_status.config(text="Software-Modus", foreground="#f9e2af")
+
+    def _hid_verbinden(self):
+        """Verbindet (oder verbindet neu) die HID-Maus mit dem Port aus dem Feld."""
+        if not HID_OK:
+            messagebox.showwarning("HID-Maus", "HID-Maus-Modul nicht verfuegbar:\n%s" % HID_IMPORT_ERR)
+            return
+        port = self.hid_port_entry.get().strip()
+        if not port:
+            messagebox.showwarning("HID-Maus", "Bitte einen Port angeben (z.B. COM6).")
+            return
+        # bestehende Verbindung zuerst sauber schliessen
+        if self.hid_maus:
+            self.hid_maus.schliessen()
+            self.hid_maus = None
+        try:
+            self.hid_maus = HidMaus(port)
+            self.hid_port = port
+            self._set_hid_status("Verbunden (%s)" % port, "#a6e3a1")
+            self._log_fish("HID-Maus verbunden auf %s." % port)
+            messagebox.showinfo("HID-Maus", "Verbunden auf %s" % port)
+        except ConnectionError as e:
+            self.hid_maus = None
+            self._set_hid_status("Nicht verbunden", "#f38ba8")
+            self._log_fish("HID-Maus nicht verbunden (%s): %s" % (port, e))
+            messagebox.showwarning("HID-Maus", "Nicht verbunden: %s" % e)
+
+    def _hid_trennen(self):
+        """Trennt die HID-Maus-Verbindung (falls verbunden)."""
+        if self.hid_maus:
+            self.hid_maus.schliessen()
+            self.hid_maus = None
+            self._log_fish("HID-Maus getrennt.")
+        self._set_hid_status("Nicht verbunden", "#f38ba8")
 
     # ---------- STATUS ----------
     def _setup_statusbar(self):
