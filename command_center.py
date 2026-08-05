@@ -1017,11 +1017,17 @@ class CommandCenter:
             return
         self.erfasstes_fenster = info
         titel = info.get("titel") or "(ohne Titel)"
+        # Stabilen Such-Titel vorschlagen. Bei VirtualBox wechselt der volle
+        # Titel ("<VM> [wird ausgefuehrt] - Oracle VirtualBox") -> nur VM-Name.
+        such = titel
+        if "VirtualBox" in titel:
+            such = titel.split(" [")[0].split(" - ")[0].strip() or titel
         self.trig_fenster.delete(0, "end")
-        self.trig_fenster.insert(0, titel[:40])
+        self.trig_fenster.insert(0, such[:40])
+        hinweis = "  (Titel wird zum Wiederfinden genutzt - Feld anpassbar)"
         self.lbl_fenster.config(
-            text="Erfasst: '%s'  [%dx%d @ %d,%d]  -> Klicks werden fenster-relativ gespeichert"
-            % (titel[:30], info["w"], info["h"], info["x"], info["y"]),
+            text="Erfasst: '%s'  [%dx%d @ %d,%d]%s"
+            % (titel[:28], info["w"], info["h"], info["x"], info["y"], hinweis),
             foreground="#a6e3a1")
         self.lbl_rec_status.config(text="Fenster erfasst - jetzt '2. Aufnehmen'", foreground="#a6e3a1")
         self._log_fish("Fenster erfasst: '%s' (%dx%d @ %d,%d)"
@@ -1036,6 +1042,18 @@ class CommandCenter:
         except ImportError:
             messagebox.showerror("Fehler", "pynput ist nicht installiert (pip install pynput).")
             return
+        # Zielfenster-Position frisch holen (Fenster koennte verschoben sein)
+        if self.erfasstes_fenster and FENSTER_OK:
+            such = self.trig_fenster.get().strip()
+            neu = fenster_util.fenster_finden(such) if such else None
+            if neu:
+                self.erfasstes_fenster = {"titel": such,
+                                          "x": neu["x"], "y": neu["y"],
+                                          "w": neu["w"], "h": neu["h"]}
+                self._log_fish("Zielfenster '%s' aktualisiert @ %d,%d (%dx%d)"
+                               % (such, neu["x"], neu["y"], neu["w"], neu["h"]))
+            else:
+                self._log_fish("Zielfenster '%s' nicht gefunden - nutze erfasste Position." % such)
         BotStatus.aufnahme_laeuft = True
         self.aufnahme_events = []
         self.aufnahme_letzter_zeit = time.time()
@@ -1119,8 +1137,9 @@ class CommandCenter:
         name = name.strip().replace(" ", "_")
         if self.erfasstes_fenster:
             win = self.erfasstes_fenster
+            such_titel = self.trig_fenster.get().strip() or win.get("titel", "")
             data = {"name": name,
-                    "fenster": {"titel": win.get("titel", ""),
+                    "fenster": {"titel": such_titel,
                                 "x": win["x"], "y": win["y"],
                                 "w": win["w"], "h": win["h"]},
                     "fenster_relativ": True,

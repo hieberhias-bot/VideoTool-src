@@ -99,6 +99,27 @@ if _WIN:
                 return _info(hwnd)
         return _info(treffer[0]) if treffer else None
 
+    def alle_fenster():
+        """Liste aller sichtbaren Top-Level-Fenster mit Titel und Groesse."""
+        ergebnis = []
+        gesehen = set()
+
+        def _cb(hwnd, lparam):
+            if user32.IsWindowVisible(hwnd):
+                t = _titel(hwnd)
+                if t:
+                    info = _info(hwnd)
+                    if info and info["w"] > 0 and info["h"] > 0:
+                        schluessel = (t, info["x"], info["y"])
+                        if schluessel not in gesehen:
+                            gesehen.add(schluessel)
+                            ergebnis.append(info)
+            return True
+
+        user32.EnumWindows(WNDENUMPROC(_cb), 0)
+        ergebnis.sort(key=lambda d: (d["titel"] or "").lower())
+        return ergebnis
+
     verfuegbar = True
 
 else:  # Nicht-Windows: Fallback
