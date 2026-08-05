@@ -29,6 +29,14 @@ except Exception as _seq_err:
     SequenzTab = None
     SequenzManager = None
 
+# Fenster-Erkennung (fuer fenster-relative Aufnahmen) - optional
+try:
+    from modules import fenster as fenster_util
+    FENSTER_OK = getattr(fenster_util, "verfuegbar", False)
+except Exception:
+    FENSTER_OK = False
+    fenster_util = None
+
 
 class BotStatus:
     fishbot_laeuft = False
@@ -267,6 +275,10 @@ class CommandCenter:
         self.trigger_job = None
         self.aufnahme_events = []
         self.aufnahme_letzter_zeit = None
+        # fenster-relative Aufnahme
+        self.erfasstes_fenster = None   # {"titel","x","y","w","h"} oder None
+        self._rec_listener = None       # pynput-Listener waehrend Aufnahme
+        self._erfass_listener = None    # pynput-Listener beim Fenster-Erfassen
 
         self._setup_style()
         self._setup_tabs()
@@ -612,10 +624,24 @@ class CommandCenter:
         def run():
             try:
                 import pyautogui
+                # Fenster-relative Basis bestimmen
+                base_x, base_y = 0, 0
+                if (isinstance(ablauf, dict) and ablauf.get("fenster_relativ")
+                        and isinstance(ablauf.get("fenster"), dict)):
+                    finfo = ablauf["fenster"]
+                    win = fenster_util.fenster_finden(finfo.get("titel")) if FENSTER_OK else None
+                    if win:
+                        base_x, base_y = win["x"], win["y"]
+                        self._log_fish("Fenster '%s' gefunden @ %d,%d - Klicks fenster-relativ."
+                                       % (finfo.get("titel"), base_x, base_y))
+                    else:
+                        base_x, base_y = finfo.get("x", 0), finfo.get("y", 0)
+                        self._log_fish("Fenster '%s' nicht gefunden - nutze Aufnahme-Position %d,%d."
+                                       % (finfo.get("titel"), base_x, base_y))
                 for i, ev in enumerate(events):
                     typ = ev.get("typ") or ev.get("type")
-                    x = ev.get("x", 0)
-                    y = ev.get("y", 0)
+                    x = base_x + ev.get("x", 0)
+                    y = base_y + ev.get("y", 0)
 
                     # Pixel-Unschaerfe (Standard 3px)
                     pixel_unscharfe = ev.get("pixel_unscharfe", 3)
@@ -702,23 +728,33 @@ class CommandCenter:
         btn_rec_frame = ttk.Frame(steuerung)
         btn_rec_frame.pack(fill="x", padx=10, pady=5)
 
-        self.btn_rec_start = ttk.Button(btn_rec_frame, text="Aufnehmen",
+        self.btn_fenster_erfassen = ttk.Button(btn_rec_frame, text="1. Fenster erfassen",
+                                               command=self._fenster_erfassen)
+        self.btn_fenster_erfassen.pack(side="left", padx=5)
+
+        self.btn_rec_start = ttk.Button(btn_rec_frame, text="2. Aufnehmen",
                                         style="Danger.TButton",
                                         command=self._rec_start)
         self.btn_rec_start.pack(side="left", padx=5)
 
-        self.btn_rec_stop = ttk.Button(btn_rec_frame, text="Stopp & Speichern",
+        self.btn_rec_stop = ttk.Button(btn_rec_frame, text="3. Stopp & Speichern",
                                        style="Success.TButton",
                                        command=self._rec_stop, state="disabled")
         self.btn_rec_stop.pack(side="left", padx=5)
 
-        ttk.Label(btn_rec_frame, text="Fenster:").pack(side="left", padx=(20, 3))
-        self.trig_fenster = ttk.Entry(btn_rec_frame, width=12)
+        ttk.Label(btn_rec_frame, text="Fenster-Titel:").pack(side="left", padx=(20, 3))
+        self.trig_fenster = ttk.Entry(btn_rec_frame, width=14)
         self.trig_fenster.pack(side="left")
         self.trig_fenster.insert(0, "Metin2")
 
         self.lbl_rec_status = ttk.Label(btn_rec_frame, text="Bereit", foreground="#a6adc8")
         self.lbl_rec_status.pack(side="right", padx=15)
+
+        # Anzeige des erfassten Fensters
+        self.lbl_fenster = ttk.Label(steuerung,
+                                     text="Kein Fenster erfasst - Klicks werden absolut gespeichert.",
+                                     foreground="#a6adc8")
+        self.lbl_fenster.pack(anchor="w", padx=12, pady=(0, 4))
 
         # Ablauf-Liste mit Buttons
         list_frame = ttk.Frame(steuerung)
@@ -949,45 +985,124 @@ class CommandCenter:
             except Exception as e:
                 messagebox.showerror("Fehler", "Konnte nicht loeschen: %s" % e)
 
-    # --- Aufnahme ---
+    # --- Fenster erfassen (fuer fenster-relative Aufnahme) ---
+    def _fenster_erfassen(self):
+        if not FENSTER_OK:
+            messagebox.showinfo("Hinweis",
+                                "Fenster-Erkennung ist nur unter Windows verfuegbar.\n"
+                                "Ohne sie werden Klicks absolut gespeichert.")
+            return
+        try:
+            from pynput import mouse
+        except ImportError:
+            messagebox.showerror("Fehler", "pynput ist nicht installiert (pip install pynput).")
+            return
+        self.lbl_rec_status.config(text="Klicke jetzt in das ZIELFENSTER...", foreground="#f9e2af")
+        self._log_fish("Fenster erfassen: bitte einmal ins Zielfenster klicken.")
+
+        def on_click(x, y, button, pressed):
+            if pressed and getattr(button, "name", "") == "left":
+                info = fenster_util.fenster_unter_cursor()
+                self.root.after(0, lambda: self._fenster_erfasst(info))
+                return False  # Listener nach erstem Klick beenden
+
+        self._erfass_listener = mouse.Listener(on_click=on_click)
+        self._erfass_listener.start()
+
+    def _fenster_erfasst(self, info):
+        self._erfass_listener = None
+        if not info or not info.get("w"):
+            self.lbl_rec_status.config(text="Kein Fenster erkannt", foreground="#f38ba8")
+            self._log_fish("Kein Fenster erkannt - bitte erneut versuchen.")
+            return
+        self.erfasstes_fenster = info
+        titel = info.get("titel") or "(ohne Titel)"
+        self.trig_fenster.delete(0, "end")
+        self.trig_fenster.insert(0, titel[:40])
+        self.lbl_fenster.config(
+            text="Erfasst: '%s'  [%dx%d @ %d,%d]  -> Klicks werden fenster-relativ gespeichert"
+            % (titel[:30], info["w"], info["h"], info["x"], info["y"]),
+            foreground="#a6e3a1")
+        self.lbl_rec_status.config(text="Fenster erfasst - jetzt '2. Aufnehmen'", foreground="#a6e3a1")
+        self._log_fish("Fenster erfasst: '%s' (%dx%d @ %d,%d)"
+                       % (titel, info["w"], info["h"], info["x"], info["y"]))
+
+    # --- Aufnahme (global, ueber pynput) ---
     def _rec_start(self):
+        if BotStatus.aufnahme_laeuft:
+            return
+        try:
+            from pynput import mouse
+        except ImportError:
+            messagebox.showerror("Fehler", "pynput ist nicht installiert (pip install pynput).")
+            return
         BotStatus.aufnahme_laeuft = True
         self.aufnahme_events = []
         self.aufnahme_letzter_zeit = time.time()
         self.btn_rec_start.config(state="disabled")
         self.btn_rec_stop.config(state="normal")
-        self.lbl_rec_status.config(text="AUFNAHME AKTIV... Klicke ins Spiel!", foreground="#f38ba8")
+        self.btn_fenster_erfassen.config(state="disabled")
+        if self.erfasstes_fenster:
+            self.lbl_rec_status.config(
+                text="AUFNAHME... Klicke im Fenster '%s'!" % (self.erfasstes_fenster.get("titel") or "?")[:20],
+                foreground="#f38ba8")
+        else:
+            self.lbl_rec_status.config(text="AUFNAHME (absolut)... Klicke ins Spiel!",
+                                       foreground="#f38ba8")
         self.detail_liste.delete(0, "end")
-        self._log_fish("Aufnahme gestartet - Klicke die Aktionen im Spiel aus.")
-        self.root.bind("<Button-1>", self._aufnahme_klick, add="+")
+        self._log_fish("Aufnahme gestartet - klicke die Aktionen aus.")
+        self._rec_listener = mouse.Listener(on_click=self._on_global_click)
+        self._rec_listener.start()
 
-    def _aufnahme_klick(self, event):
+    def _on_global_click(self, x, y, button, pressed):
+        # laeuft im pynput-Thread -> nur Daten sammeln, GUI via after()
+        if not BotStatus.aufnahme_laeuft or not pressed:
+            return
+        if getattr(button, "name", "") != "left":
+            return
+        win = self.erfasstes_fenster
+        if win:
+            # nur Klicks INNERHALB des Zielfensters aufnehmen
+            if not (win["x"] <= x < win["x"] + win["w"] and
+                    win["y"] <= y < win["y"] + win["h"]):
+                return
+            rx, ry = x - win["x"], y - win["y"]
+        else:
+            rx, ry = x, y
+        self.root.after(0, lambda: self._rec_add_click(rx, ry, x, y))
+
+    def _rec_add_click(self, rx, ry, absx, absy):
         if not BotStatus.aufnahme_laeuft:
             return
-        try:
-            import pyautogui
-            x, y = pyautogui.position()
-            jetzt = time.time()
-            zeit_abstand = int((jetzt - self.aufnahme_letzter_zeit) * 1000) if self.aufnahme_letzter_zeit else 0
-            self.aufnahme_letzter_zeit = jetzt
-            ev = {"typ": "click", "x": x, "y": y,
-                  "zeit_bis_naechster_ms": zeit_abstand, "zufall_ms": 0,
-                  "pixel_unscharfe": 3}
-            self.aufnahme_events.append(ev)
-            n = len(self.aufnahme_events)
-            self.detail_liste.insert("end", "%-4d %-10s %-8d %-8d %-14d %-14d %-16d %s" %
-                                   (n, "click", x, y, zeit_abstand, 0, 3, "-"))
-            self._log_fish("Klick %d: (%d, %d) Warte: %dms" % (n, x, y, zeit_abstand))
-        except Exception as e:
-            self._log_fish("Fehler: %s" % e)
+        jetzt = time.time()
+        zeit_abstand = int((jetzt - self.aufnahme_letzter_zeit) * 1000) if self.aufnahme_letzter_zeit else 0
+        self.aufnahme_letzter_zeit = jetzt
+        ev = {"typ": "click", "x": rx, "y": ry,
+              "zeit_bis_naechster_ms": zeit_abstand, "zufall_ms": 0,
+              "pixel_unscharfe": 3}
+        self.aufnahme_events.append(ev)
+        n = len(self.aufnahme_events)
+        self.detail_liste.insert("end", "%-4d %-10s %-8d %-8d %-14d %-14d %-16d %s" %
+                               (n, "click", rx, ry, zeit_abstand, 0, 3, "-"))
+        if self.erfasstes_fenster:
+            self._log_fish("Klick %d: fenster-rel (%d, %d) [abs %d,%d] Warte: %dms"
+                           % (n, rx, ry, absx, absy, zeit_abstand))
+        else:
+            self._log_fish("Klick %d: (%d, %d) Warte: %dms" % (n, rx, ry, zeit_abstand))
 
     def _rec_stop(self):
         if not BotStatus.aufnahme_laeuft:
             return
         BotStatus.aufnahme_laeuft = False
-        self.root.unbind("<Button-1>")
+        if self._rec_listener:
+            try:
+                self._rec_listener.stop()
+            except Exception:
+                pass
+            self._rec_listener = None
         self.btn_rec_start.config(state="normal")
         self.btn_rec_stop.config(state="disabled")
+        self.btn_fenster_erfassen.config(state="normal")
         self.lbl_rec_status.config(text="Bereit", foreground="#a6adc8")
 
         if not self.aufnahme_events:
@@ -1002,10 +1117,21 @@ class CommandCenter:
             return
 
         name = name.strip().replace(" ", "_")
-        fenster = self.trig_fenster.get().strip() or "Metin2"
-        data = {"name": name, "fenster": fenster,
-                "erstellt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "events": self.aufnahme_events}
+        if self.erfasstes_fenster:
+            win = self.erfasstes_fenster
+            data = {"name": name,
+                    "fenster": {"titel": win.get("titel", ""),
+                                "x": win["x"], "y": win["y"],
+                                "w": win["w"], "h": win["h"]},
+                    "fenster_relativ": True,
+                    "erstellt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "events": self.aufnahme_events}
+        else:
+            fenster = self.trig_fenster.get().strip() or "Metin2"
+            data = {"name": name, "fenster": fenster,
+                    "fenster_relativ": False,
+                    "erstellt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "events": self.aufnahme_events}
         datei = os.path.join(BASE_DIR, "ablauf_%s.json" % name)
         try:
             with open(datei, "w", encoding="utf-8") as f:

@@ -32,6 +32,15 @@ try:
 except ImportError:  # Standalone-Import (ohne Package)
     from statistic_manager import StatistikManager
 
+try:
+    from .fenster import fenster_finden as _fenster_finden
+except ImportError:
+    try:
+        from fenster import fenster_finden as _fenster_finden
+    except ImportError:
+        def _fenster_finden(titel):  # Fallback ohne Fenster-Modul
+            return None
+
 # Projekt-Hauptordner (eine Ebene ueber modules/)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -555,6 +564,19 @@ class SequenzManager:
             self._log("pyautogui nicht installiert - Ablauf nicht spielbar.")
             return False
 
+        # Fenster-relative Basis bestimmen
+        base_x, base_y = 0, 0
+        if (isinstance(daten, dict) and daten.get("fenster_relativ")
+                and isinstance(daten.get("fenster"), dict)):
+            finfo = daten["fenster"]
+            win = _fenster_finden(finfo.get("titel"))
+            if win:
+                base_x, base_y = win["x"], win["y"]
+                self._log("Fenster '%s' gefunden @ %d,%d." % (finfo.get("titel"), base_x, base_y))
+            else:
+                base_x, base_y = finfo.get("x", 0), finfo.get("y", 0)
+                self._log("Fenster '%s' nicht gefunden - nutze Aufnahme-Position." % finfo.get("titel"))
+
         try:
             for i, ev in enumerate(events):
                 if self._hard_stop.is_set() or self._soft_stop.is_set():
@@ -562,8 +584,8 @@ class SequenzManager:
                 self._pause_pruefen()
 
                 typ = (ev.get("typ") or ev.get("type") or "").lower()
-                x = ev.get("x", 0)
-                y = ev.get("y", 0)
+                x = base_x + ev.get("x", 0)
+                y = base_y + ev.get("y", 0)
 
                 unscharf = ev.get("pixel_unscharfe", 0)
                 if unscharf and unscharf > 0:
