@@ -1,0 +1,79 @@
+{
+  "name": "testlauf1",
+  "fenster": "Metin2",
+  "erstellt": "2026-08-05 10:51:43",
+  "events": [
+    {
+      "typ": "click",
+      "x": 335,
+      "y": 481,
+      "zeit_bis_naechster_ms": 495,
+      "zufall_ms": 0,
+      "pixel_unscharfe": 3
+    },
+    {
+      "typ": "click",
+      "x": 758,
+      "y": 525,
+      "zeit_bis_naechster_ms": 688,
+      "zufall_ms": 0,
+      "pixel_unscharfe": 3
+    },
+    {
+      "typ": "click",
+      "x": 834,
+      "y": 411,
+      "zeit_bis_naechster_ms": 879,
+      "zufall_ms": 0,
+      "pixel_unscharfe": 3
+    },
+    {
+      "typ": "click",
+      "x": 817,
+      "y": 238,
+      "zeit_bis_naechster_ms": 4631,
+      "zufall_ms": 0,
+      "pixel_unscharfe": 3
+    },
+    {
+      "typ": "click",
+      "x": 758,
+      "y": 506,
+      "zeit_bis_naechster_ms": 927,
+      "zufall_ms": 0,
+      "pixel_unscharfe": 3
+    },
+    {
+      "typ": "click",
+      "x": 1019,
+      "y": 418,
+      "zeit_bis_naechster_ms": 1908,
+      "zufall_ms": 0,
+      "pixel_unscharfe": 3
+    },
+    {
+      "typ": "click",
+      "x": 998,
+      "y": 499,
+      "zeit_bis_naechster_ms": 903,
+      "zufall_ms": 500,
+      "pixel_unscharfe": 4
+    },
+    {
+      "typ": "click",
+      "x": 245,
+      "y": 408,
+      "zeit_bis_naechster_ms": 2260,
+      "zufall_ms": 0,
+      "pixel_unscharfe": 3
+    },
+    {
+      "typ": "click",
+      "x": 390,
+      "y": 336,
+      "zeit_bis_naechster_ms": 2292,
+      "zufall_ms": 0,
+      "pixel_unscharfe": 3
+    }
+  ]
+}

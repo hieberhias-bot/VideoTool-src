@@ -1,0 +1,63 @@
+{
+  "name": "fisch",
+  "fenster": "Metin2",
+  "erstellt": "2026-08-05 11:53:03",
+  "events": [
+    {
+      "typ": "click",
+      "x": 216,
+      "y": 341,
+      "zeit_bis_naechster_ms": 483,
+      "zufall_ms": 0,
+      "pixel_unscharfe": 3
+    },
+    {
+      "typ": "click",
+      "x": 324,
+      "y": 395,
+      "zeit_bis_naechster_ms": 397,
+      "zufall_ms": 0,
+      "pixel_unscharfe": 3
+    },
+    {
+      "typ": "click",
+      "x": 656,
+      "y": 382,
+      "zeit_bis_naechster_ms": 415,
+      "zufall_ms": 0,
+      "pixel_unscharfe": 3
+    },
+    {
+      "typ": "click",
+      "x": 571,
+      "y": 317,
+      "zeit_bis_naechster_ms": 403,
+      "zufall_ms": 0,
+      "pixel_unscharfe": 3
+    },
+    {
+      "typ": "click",
+      "x": 385,
+      "y": 360,
+      "zeit_bis_naechster_ms": 608,
+      "zufall_ms": 0,
+      "pixel_unscharfe": 3
+    },
+    {
+      "typ": "click",
+      "x": 670,
+      "y": 425,
+      "zeit_bis_naechster_ms": 495,
+      "zufall_ms": 0,
+      "pixel_unscharfe": 3
+    },
+    {
+      "typ": "click",
+      "x": 290,
+      "y": 221,
+      "zeit_bis_naechster_ms": 1940,
+      "zufall_ms": 0,
+      "pixel_unscharfe": 3
+    }
+  ]
+}

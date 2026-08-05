@@ -1,0 +1,43 @@
+{
+  "name": "TESRT",
+  "fenster": "Metin2",
+  "erstellt": "2026-08-05 10:29:58",
+  "events": [
+    {
+      "typ": "click",
+      "x": 585,
+      "y": 553,
+      "zeit_bis_naechster_ms": 1071
+    },
+    {
+      "typ": "click",
+      "x": 720,
+      "y": 579,
+      "zeit_bis_naechster_ms": 1027
+    },
+    {
+      "typ": "click",
+      "x": 1022,
+      "y": 581,
+      "zeit_bis_naechster_ms": 824
+    },
+    {
+      "typ": "click",
+      "x": 818,
+      "y": 575,
+      "zeit_bis_naechster_ms": 899
+    },
+    {
+      "typ": "click",
+      "x": 682,
+      "y": 618,
+      "zeit_bis_naechster_ms": 383
+    },
+    {
+      "typ": "click",
+      "x": 343,
+      "y": 312,
+      "zeit_bis_naechster_ms": 1184
+    }
+  ]
+}
