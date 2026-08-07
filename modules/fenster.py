@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """modules/fenster.py - Fenster-Erkennung fuer fenster-relative Aufnahmen"""
 
 import ctypes
