@@ -1236,6 +1236,18 @@ class CommandCenter:
         self._log_fish("Fisch-Bot auf %d Fenster verteilt gestartet." % len(gestartet))
         self._warte_auf_fischbot_ende()
 
+    def _start_fishbot_alle_fenster_mit_makro(self, skript_name, prioritaet=PRIORITAET_MITTEL):
+        try:
+            gestartet = self.makro_manager.fischbot_und_makro_starten_alle_fenster(
+                skript_name, prioritaet=prioritaet, fischbot_prioritaet=PRIORITAET_HOCH)
+        except MakroManagerFehler as e:
+            self._log_fish('Fisch-Bot + paralleles Skript konnten nicht gestartet werden: %s' % e)
+            self._fishbot_beendet('VERBINDUNGSFEHLER')
+            return
+        self._log_fish('Fisch-Bot + paralleles Skript "%s" auf %d Fenster verteilt gestartet.'
+                       % (skript_name, len(gestartet)))
+        self._warte_auf_fischbot_ende()
+
     def _start_fishbot_als_makro(self, skript_name, prioritaet, fenster_wahl=FENSTER_AUSWAHL_ALLE):
         """Startet Fisch-Bot UND das gewaehlte parallele Skript ueber den
         gemeinsamen MakroManager/MausDispatcher, statt fish_bot.py direkt mit
