@@ -1,0 +1,263 @@
+[HIDMaus] Verbunden mit COM6
+2026-08-06 10:54:11,591 [INFO] CSV-Datenlogger initialisiert: C:\Users\vm1\Desktop\VideoTool-src\fish_daten.csv
+2026-08-06 10:54:11,591 [INFO] FishBot laeuft. Abbruch mit Strg+C.
+2026-08-06 10:54:11,591 [INFO] Zustand: FISCHEN
+2026-08-06 10:54:11,647 [DEBUG] popup=kein Popup ziel=kein Ziel im_ring=False
+2026-08-06 10:54:12,745 [DEBUG] popup=kein Popup ziel=kein Ziel im_ring=False
+2026-08-06 10:54:13,830 [DEBUG] popup=kein Popup ziel=kein Ziel im_ring=False
+2026-08-06 10:54:14,918 [DEBUG] popup=kein Popup ziel=kein Ziel im_ring=False
+2026-08-06 10:54:16,112 [DEBUG] popup=kein Popup ziel=kein Ziel im_ring=False
+2026-08-06 10:54:17,207 [DEBUG] popup=kein Popup ziel=kein Ziel im_ring=False
+2026-08-06 10:54:18,291 [DEBUG] popup=(248, 221, 65) ziel=(366, 222) im_ring=False
+2026-08-06 10:54:18,571 [INFO] Ziel im Ring bei (353, 251)
+2026-08-06 10:54:18,862 [INFO] Ziel im Ring bei (290, 269)
+2026-08-06 10:54:19,353 [DEBUG] popup=(248, 221, 65) ziel=(154, 281) im_ring=False
+2026-08-06 10:54:20,153 [INFO] Ziel im Ring bei (315, 288)
+2026-08-06 10:54:20,419 [DEBUG] popup=(248, 222, 66) ziel=(340, 275) im_ring=False
+2026-08-06 10:54:21,303 [INFO] Ziel im Ring bei (339, 260)
+2026-08-06 10:54:21,620 [DEBUG] popup=(248, 221, 65) ziel=(215, 219) im_ring=True
+2026-08-06 10:54:21,620 [INFO] Ziel im Ring bei (267, 231)
+2026-08-06 10:54:22,786 [DEBUG] popup=(248, 221, 65) ziel=(153, 226) im_ring=False
+2026-08-06 10:54:23,914 [DEBUG] popup=(248, 221, 65) ziel=(191, 271) im_ring=False
+2026-08-06 10:54:24,189 [INFO] Ziel im Ring bei (253, 239)
+2026-08-06 10:54:24,490 [INFO] Ziel im Ring bei (253, 239)
+2026-08-06 10:54:25,033 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:54:25,871 [INFO] Ziel im Ring bei (269, 236)
+2026-08-06 10:54:26,181 [DEBUG] popup=(248, 221, 65) ziel=(266, 274) im_ring=True
+2026-08-06 10:54:26,181 [INFO] Ziel im Ring bei (318, 286)
+2026-08-06 10:54:26,476 [INFO] Ziel im Ring bei (318, 285)
+2026-08-06 10:54:26,774 [INFO] Ziel im Ring bei (348, 278)
+2026-08-06 10:54:27,333 [DEBUG] popup=(248, 221, 65) ziel=(353, 238) im_ring=False
+2026-08-06 10:54:27,890 [INFO] Ziel im Ring bei (317, 215)
+2026-08-06 10:54:28,150 [INFO] Ziel im Ring bei (264, 193)
+2026-08-06 10:54:28,434 [DEBUG] popup=(248, 221, 65) ziel=(171, 164) im_ring=False
+2026-08-06 10:54:29,509 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:54:30,640 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:54:30,909 [INFO] Ziel im Ring bei (281, 193)
+2026-08-06 10:54:31,169 [INFO] Ziel im Ring bei (281, 193)
+2026-08-06 10:54:31,467 [INFO] Ziel im Ring bei (263, 204)
+2026-08-06 10:54:31,757 [DEBUG] popup=(248, 221, 65) ziel=(164, 219) im_ring=False
+2026-08-06 10:54:32,316 [INFO] Ziel im Ring bei (247, 244)
+2026-08-06 10:54:32,606 [INFO] Ziel im Ring bei (262, 251)
+2026-08-06 10:54:32,903 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:54:34,014 [DEBUG] popup=kein Popup ziel=kein Ziel im_ring=False
+2026-08-06 10:54:34,291 [INFO] Zustand: WARTE_EINHOLEN
+2026-08-06 10:54:38,154 [INFO] Zustand: PRUEFE_POPUP_1
+2026-08-06 10:54:40,450 [INFO] Zustand: FISCHEN
+2026-08-06 10:54:40,546 [DEBUG] popup=(248, 221, 65) ziel=(130, 222) im_ring=False
+2026-08-06 10:54:41,071 [INFO] Ziel im Ring bei (302, 289)
+2026-08-06 10:54:41,357 [INFO] Ziel im Ring bei (302, 289)
+2026-08-06 10:54:41,641 [DEBUG] popup=(248, 221, 65) ziel=(252, 267) im_ring=True
+2026-08-06 10:54:41,641 [INFO] Ziel im Ring bei (304, 279)
+2026-08-06 10:54:41,931 [INFO] Ziel im Ring bei (319, 202)
+2026-08-06 10:54:42,236 [INFO] Ziel im Ring bei (323, 181)
+2026-08-06 10:54:42,536 [INFO] Ziel im Ring bei (320, 181)
+2026-08-06 10:54:42,823 [DEBUG] popup=(248, 221, 65) ziel=(202, 201) im_ring=True
+2026-08-06 10:54:42,823 [INFO] Ziel im Ring bei (254, 213)
+2026-08-06 10:54:43,651 [INFO] Ziel im Ring bei (265, 248)
+2026-08-06 10:54:43,950 [DEBUG] popup=(248, 221, 65) ziel=(275, 266) im_ring=True
+2026-08-06 10:54:43,950 [INFO] Ziel im Ring bei (327, 278)
+2026-08-06 10:54:45,103 [DEBUG] popup=(248, 221, 65) ziel=(318, 205) im_ring=False
+2026-08-06 10:54:45,677 [INFO] Ziel im Ring bei (319, 214)
+2026-08-06 10:54:46,272 [DEBUG] popup=(248, 221, 65) ziel=(131, 186) im_ring=False
+2026-08-06 10:54:47,095 [INFO] Ziel im Ring bei (266, 208)
+2026-08-06 10:54:47,331 [DEBUG] popup=(248, 221, 65) ziel=(267, 203) im_ring=True
+2026-08-06 10:54:47,331 [INFO] Ziel im Ring bei (319, 215)
+2026-08-06 10:54:47,617 [INFO] Ziel im Ring bei (319, 215)
+2026-08-06 10:54:48,479 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:54:49,330 [INFO] Zustand: WARTE_EINHOLEN
+2026-08-06 10:54:54,108 [INFO] Zustand: PRUEFE_POPUP_1
+2026-08-06 10:54:56,411 [INFO] Zustand: FISCHEN
+2026-08-06 10:54:56,480 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:54:56,760 [INFO] Ziel im Ring bei (282, 186)
+2026-08-06 10:54:57,048 [INFO] Ziel im Ring bei (338, 228)
+2026-08-06 10:54:57,332 [INFO] Ziel im Ring bei (351, 238)
+2026-08-06 10:54:57,641 [DEBUG] popup=(248, 221, 65) ziel=(297, 232) im_ring=True
+2026-08-06 10:54:57,641 [INFO] Ziel im Ring bei (349, 244)
+2026-08-06 10:54:58,461 [INFO] Ziel im Ring bei (314, 274)
+2026-08-06 10:54:58,744 [DEBUG] popup=(248, 221, 65) ziel=(196, 239) im_ring=True
+2026-08-06 10:54:58,744 [INFO] Ziel im Ring bei (248, 251)
+2026-08-06 10:54:59,593 [INFO] Ziel im Ring bei (245, 208)
+2026-08-06 10:54:59,867 [DEBUG] popup=(248, 221, 65) ziel=(193, 196) im_ring=True
+2026-08-06 10:54:59,867 [INFO] Ziel im Ring bei (245, 208)
+2026-08-06 10:55:00,953 [DEBUG] popup=(247, 221, 65) ziel=(191, 236) im_ring=True
+2026-08-06 10:55:00,953 [INFO] Ziel im Ring bei (243, 248)
+2026-08-06 10:55:01,828 [INFO] Ziel im Ring bei (286, 283)
+2026-08-06 10:55:02,121 [DEBUG] popup=(248, 222, 66) ziel=(311, 248) im_ring=True
+2026-08-06 10:55:02,121 [INFO] Ziel im Ring bei (363, 260)
+2026-08-06 10:55:02,690 [INFO] Ziel im Ring bei (363, 257)
+2026-08-06 10:55:03,290 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:55:03,848 [INFO] Ziel im Ring bei (364, 213)
+2026-08-06 10:55:04,437 [DEBUG] popup=(248, 221, 65) ziel=(336, 249) im_ring=False
+2026-08-06 10:55:04,730 [INFO] Ziel im Ring bei (347, 257)
+2026-08-06 10:55:04,996 [INFO] Ziel im Ring bei (278, 253)
+2026-08-06 10:55:05,505 [DEBUG] popup=(248, 221, 65) ziel=(135, 236) im_ring=False
+2026-08-06 10:55:06,632 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:55:07,728 [DEBUG] popup=kein Popup ziel=kein Ziel im_ring=False
+2026-08-06 10:55:07,728 [INFO] Zustand: WARTE_EINHOLEN
+2026-08-06 10:55:12,433 [INFO] Zustand: PRUEFE_POPUP_1
+2026-08-06 10:55:15,035 [INFO] Zustand: PRUEFE_POPUP_2
+2026-08-06 10:55:17,142 [INFO] Zustand: FISCHEN
+2026-08-06 10:55:17,215 [DEBUG] popup=(248, 221, 65) ziel=(290, 207) im_ring=True
+2026-08-06 10:55:17,215 [INFO] Ziel im Ring bei (342, 219)
+2026-08-06 10:55:18,343 [DEBUG] popup=(248, 221, 65) ziel=(297, 270) im_ring=False
+2026-08-06 10:55:19,437 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:55:19,973 [INFO] Ziel im Ring bei (326, 282)
+2026-08-06 10:55:20,258 [INFO] Ziel im Ring bei (267, 252)
+2026-08-06 10:55:20,550 [DEBUG] popup=(248, 221, 65) ziel=(180, 223) im_ring=True
+2026-08-06 10:55:20,550 [INFO] Ziel im Ring bei (232, 235)
+2026-08-06 10:55:20,814 [INFO] Ziel im Ring bei (242, 238)
+2026-08-06 10:55:21,083 [INFO] Ziel im Ring bei (284, 224)
+2026-08-06 10:55:21,374 [INFO] Ziel im Ring bei (296, 220)
+2026-08-06 10:55:21,636 [DEBUG] popup=(248, 221, 65) ziel=(244, 208) im_ring=True
+2026-08-06 10:55:21,636 [INFO] Ziel im Ring bei (296, 220)
+2026-08-06 10:55:21,952 [INFO] Ziel im Ring bei (290, 198)
+2026-08-06 10:55:22,826 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:55:23,653 [INFO] Zustand: WARTE_EINHOLEN
+2026-08-06 10:55:28,492 [INFO] Zustand: PRUEFE_POPUP_1
+2026-08-06 10:55:30,888 [INFO] Zustand: PRUEFE_POPUP_2
+2026-08-06 10:55:33,762 [INFO] Zustand: FISCHEN
+2026-08-06 10:55:33,842 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:55:34,921 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:55:36,016 [DEBUG] popup=(248, 221, 65) ziel=(229, 174) im_ring=True
+2026-08-06 10:55:36,016 [INFO] Ziel im Ring bei (281, 186)
+2026-08-06 10:55:36,316 [INFO] Ziel im Ring bei (316, 199)
+2026-08-06 10:55:36,577 [INFO] Ziel im Ring bei (316, 199)
+2026-08-06 10:55:36,855 [INFO] Ziel im Ring bei (343, 235)
+2026-08-06 10:55:37,139 [DEBUG] popup=(248, 221, 65) ziel=(336, 281) im_ring=False
+2026-08-06 10:55:38,235 [DEBUG] popup=(248, 221, 65) ziel=(273, 249) im_ring=True
+2026-08-06 10:55:38,235 [INFO] Ziel im Ring bei (325, 261)
+2026-08-06 10:55:38,478 [INFO] Ziel im Ring bei (278, 228)
+2026-08-06 10:55:39,317 [DEBUG] popup=(248, 221, 65) ziel=(153, 165) im_ring=False
+2026-08-06 10:55:39,574 [INFO] Ziel im Ring bei (253, 210)
+2026-08-06 10:55:39,851 [INFO] Ziel im Ring bei (311, 251)
+2026-08-06 10:55:40,404 [DEBUG] popup=(248, 221, 65) ziel=(348, 302) im_ring=False
+2026-08-06 10:55:41,229 [INFO] Ziel im Ring bei (337, 253)
+2026-08-06 10:55:41,539 [DEBUG] popup=(248, 221, 65) ziel=(285, 241) im_ring=True
+2026-08-06 10:55:41,539 [INFO] Ziel im Ring bei (337, 253)
+2026-08-06 10:55:42,648 [DEBUG] popup=kein Popup ziel=kein Ziel im_ring=False
+2026-08-06 10:55:43,184 [INFO] Zustand: WARTE_EINHOLEN
+2026-08-06 10:55:46,952 [INFO] Zustand: PRUEFE_POPUP_1
+2026-08-06 10:55:49,810 [INFO] Zustand: FISCHEN
+2026-08-06 10:55:49,867 [DEBUG] popup=kein Popup ziel=(190, 217) im_ring=False
+2026-08-06 10:55:50,132 [INFO] Ziel im Ring bei (282, 265)
+2026-08-06 10:55:50,428 [INFO] Ziel im Ring bei (320, 298)
+2026-08-06 10:55:50,715 [INFO] Ziel im Ring bei (320, 298)
+2026-08-06 10:55:50,996 [DEBUG] popup=(248, 221, 65) ziel=(213, 291) im_ring=False
+2026-08-06 10:55:52,118 [DEBUG] popup=(248, 221, 65) ziel=(136, 251) im_ring=False
+2026-08-06 10:55:52,923 [INFO] Ziel im Ring bei (246, 208)
+2026-08-06 10:55:53,193 [DEBUG] popup=(248, 220, 65) ziel=(242, 153) im_ring=True
+2026-08-06 10:55:53,193 [INFO] Ziel im Ring bei (294, 165)
+2026-08-06 10:55:54,284 [DEBUG] popup=(248, 221, 65) ziel=(327, 158) im_ring=False
+2026-08-06 10:55:54,837 [INFO] Ziel im Ring bei (357, 235)
+2026-08-06 10:55:55,372 [DEBUG] popup=(248, 221, 65) ziel=(281, 302) im_ring=False
+2026-08-06 10:55:55,929 [INFO] Ziel im Ring bei (283, 288)
+2026-08-06 10:55:56,516 [DEBUG] popup=(248, 221, 65) ziel=(131, 217) im_ring=False
+2026-08-06 10:55:57,308 [INFO] Ziel im Ring bei (263, 290)
+2026-08-06 10:55:57,606 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:55:58,719 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:55:59,847 [DEBUG] popup=kein Popup ziel=kein Ziel im_ring=False
+2026-08-06 10:56:00,137 [INFO] Zustand: WARTE_EINHOLEN
+2026-08-06 10:56:04,672 [INFO] Zustand: PRUEFE_POPUP_1
+2026-08-06 10:56:06,963 [INFO] Zustand: FISCHEN
+2026-08-06 10:56:07,055 [DEBUG] popup=(248, 221, 65) ziel=(259, 255) im_ring=True
+2026-08-06 10:56:07,055 [INFO] Ziel im Ring bei (311, 267)
+2026-08-06 10:56:07,879 [INFO] Ziel im Ring bei (282, 299)
+2026-08-06 10:56:08,168 [DEBUG] popup=(248, 221, 65) ziel=(177, 293) im_ring=False
+2026-08-06 10:56:09,001 [INFO] Ziel im Ring bei (291, 241)
+2026-08-06 10:56:09,288 [DEBUG] popup=(248, 221, 65) ziel=(239, 229) im_ring=True
+2026-08-06 10:56:09,289 [INFO] Ziel im Ring bei (291, 241)
+2026-08-06 10:56:09,575 [INFO] Ziel im Ring bei (317, 240)
+2026-08-06 10:56:10,446 [DEBUG] popup=(248, 221, 65) ziel=(315, 218) im_ring=True
+2026-08-06 10:56:10,446 [INFO] Ziel im Ring bei (367, 230)
+2026-08-06 10:56:10,747 [INFO] Ziel im Ring bei (286, 215)
+2026-08-06 10:56:11,574 [DEBUG] popup=(248, 221, 65) ziel=(153, 187) im_ring=False
+2026-08-06 10:56:11,859 [INFO] Ziel im Ring bei (260, 233)
+2026-08-06 10:56:12,127 [INFO] Ziel im Ring bei (282, 247)
+2026-08-06 10:56:12,441 [INFO] Ziel im Ring bei (282, 247)
+2026-08-06 10:56:12,743 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:56:13,789 [DEBUG] popup=kein Popup ziel=kein Ziel im_ring=False
+2026-08-06 10:56:14,053 [INFO] Zustand: WARTE_EINHOLEN
+2026-08-06 10:56:17,999 [INFO] Zustand: PRUEFE_POPUP_1
+2026-08-06 10:56:20,181 [INFO] Zustand: FISCHEN
+2026-08-06 10:56:20,241 [DEBUG] popup=(247, 221, 65) ziel=(275, 261) im_ring=True
+2026-08-06 10:56:20,241 [INFO] Ziel im Ring bei (327, 273)
+2026-08-06 10:56:21,412 [DEBUG] popup=(248, 221, 65) ziel=(258, 239) im_ring=True
+2026-08-06 10:56:21,412 [INFO] Ziel im Ring bei (310, 251)
+2026-08-06 10:56:21,708 [INFO] Ziel im Ring bei (264, 210)
+2026-08-06 10:56:21,974 [INFO] Ziel im Ring bei (264, 210)
+2026-08-06 10:56:22,262 [INFO] Ziel im Ring bei (287, 198)
+2026-08-06 10:56:22,540 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:56:23,323 [INFO] Ziel im Ring bei (285, 176)
+2026-08-06 10:56:23,600 [DEBUG] popup=(248, 220, 65) ziel=(183, 171) im_ring=False
+2026-08-06 10:56:24,194 [INFO] Ziel im Ring bei (267, 209)
+2026-08-06 10:56:24,463 [INFO] Ziel im Ring bei (284, 226)
+2026-08-06 10:56:24,739 [DEBUG] popup=(248, 221, 65) ziel=(232, 214) im_ring=True
+2026-08-06 10:56:24,739 [INFO] Ziel im Ring bei (284, 226)
+2026-08-06 10:56:25,840 [DEBUG] popup=kein Popup ziel=kein Ziel im_ring=False
+2026-08-06 10:56:26,418 [INFO] Zustand: WARTE_EINHOLEN
+2026-08-06 10:56:31,115 [INFO] Zustand: PRUEFE_POPUP_1
+2026-08-06 10:56:33,401 [INFO] Zustand: FISCHEN
+2026-08-06 10:56:33,461 [DEBUG] popup=(248, 221, 65) ziel=(180, 297) im_ring=False
+2026-08-06 10:56:34,488 [DEBUG] popup=(248, 221, 65) ziel=(355, 289) im_ring=False
+2026-08-06 10:56:35,606 [DEBUG] popup=(248, 221, 65) ziel=(165, 302) im_ring=False
+2026-08-06 10:56:36,410 [INFO] Ziel im Ring bei (259, 269)
+2026-08-06 10:56:36,715 [DEBUG] popup=(248, 221, 65) ziel=(251, 216) im_ring=True
+2026-08-06 10:56:36,715 [INFO] Ziel im Ring bei (303, 228)
+2026-08-06 10:56:37,053 [INFO] Ziel im Ring bei (303, 228)
+2026-08-06 10:56:37,358 [INFO] Ziel im Ring bei (321, 272)
+2026-08-06 10:56:37,636 [INFO] Ziel im Ring bei (326, 282)
+2026-08-06 10:56:37,924 [DEBUG] popup=(248, 221, 65) ziel=(276, 269) im_ring=True
+2026-08-06 10:56:37,924 [INFO] Ziel im Ring bei (328, 281)
+2026-08-06 10:56:38,204 [INFO] Ziel im Ring bei (366, 220)
+2026-08-06 10:56:39,050 [DEBUG] popup=(248, 221, 65) ziel=(324, 190) im_ring=False
+2026-08-06 10:56:39,310 [INFO] Ziel im Ring bei (346, 263)
+2026-08-06 10:56:39,885 [INFO] Ziel im Ring bei (330, 295)
+2026-08-06 10:56:40,186 [DEBUG] popup=(248, 221, 65) ziel=(252, 302) im_ring=False
+2026-08-06 10:56:40,733 [INFO] Ziel im Ring bei (291, 286)
+2026-08-06 10:56:41,065 [INFO] Ziel im Ring bei (264, 214)
+2026-08-06 10:56:41,352 [DEBUG] popup=(248, 221, 65) ziel=(212, 202) im_ring=True
+2026-08-06 10:56:41,352 [INFO] Ziel im Ring bei (264, 214)
+2026-08-06 10:56:41,662 [INFO] Ziel im Ring bei (243, 221)
+2026-08-06 10:56:42,491 [DEBUG] popup=(248, 221, 65) ziel=(157, 207) im_ring=False
+2026-08-06 10:56:43,299 [INFO] Ziel im Ring bei (286, 283)
+2026-08-06 10:56:43,586 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:56:44,426 [INFO] Ziel im Ring bei (345, 242)
+2026-08-06 10:56:44,680 [DEBUG] popup=(248, 221, 65) ziel=(294, 185) im_ring=True
+2026-08-06 10:56:44,680 [INFO] Ziel im Ring bei (346, 197)
+2026-08-06 10:56:44,943 [INFO] Ziel im Ring bei (346, 197)
+2026-08-06 10:56:45,228 [INFO] Ziel im Ring bei (346, 197)
+2026-08-06 10:56:45,795 [DEBUG] popup=kein Popup ziel=kein Ziel im_ring=False
+2026-08-06 10:56:46,074 [INFO] Zustand: WARTE_EINHOLEN
+2026-08-06 10:56:50,769 [INFO] Zustand: PRUEFE_POPUP_1
+2026-08-06 10:56:53,430 [INFO] Zustand: PRUEFE_POPUP_2
+2026-08-06 10:56:55,784 [DEBUG] wurm_klicken @ 1786006615.785: fenster={'x': 52, 'y': 12, 'w': 816, 'h': 639} Screenshot-Groesse=816x639 (BxH)
+2026-08-06 10:56:55,784 [DEBUG] wurm_stapel_finden: Screenshot=816x639 (BxH), WURM_ROI=(0.75, 0.41, 1.0, 0.5) -> Box (612,261)-(816,319) [204x58 px]
+2026-08-06 10:56:55,785 [DEBUG] wurm_stapel_finden: 2 Rohtreffer >= 0.60, Top-Scores=[0.678, 0.658]
+2026-08-06 10:56:55,785 [DEBUG] wurm_stapel_finden: 2 Stapel nach NMS (Score, x, y): [(0.678, np.int64(683), np.int64(291)), (0.658, np.int64(715), np.int64(291))]
+2026-08-06 10:56:55,785 [DEBUG] Wurm-Hitbox: 32x30 px um (683, 291) [Score 0.678], gewaehlter Klickpunkt (687, 288)
+2026-08-06 10:56:55,785 [INFO] Klicke (rechts) Wurm-Stapel bei (739, 300)
+2026-08-06 10:56:55,814 [INFO] Zustand: PRUEFE_POPUP_3
+2026-08-06 10:56:58,493 [INFO] Zustand: FISCHEN
+2026-08-06 10:56:58,574 [DEBUG] popup=kein Popup ziel=(233, 165) im_ring=False
+2026-08-06 10:56:59,652 [DEBUG] popup=(248, 221, 65) ziel=(317, 254) im_ring=False
+2026-08-06 10:57:00,780 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:57:01,337 [INFO] Ziel im Ring bei (283, 297)
+2026-08-06 10:57:01,641 [INFO] Ziel im Ring bei (262, 279)
+2026-08-06 10:57:01,936 [DEBUG] popup=(248, 221, 65) ziel=(204, 272) im_ring=True
+2026-08-06 10:57:01,936 [INFO] Ziel im Ring bei (256, 284)
+2026-08-06 10:57:03,065 [DEBUG] popup=(248, 221, 65) ziel=(249, 288) im_ring=True
+2026-08-06 10:57:03,065 [INFO] Ziel im Ring bei (301, 300)
+2026-08-06 10:57:04,206 [DEBUG] popup=(248, 221, 65) ziel=(204, 294) im_ring=False
+2026-08-06 10:57:05,251 [DEBUG] popup=(248, 221, 65) ziel=(217, 284) im_ring=False
+2026-08-06 10:57:05,503 [INFO] Ziel im Ring bei (291, 240)
+2026-08-06 10:57:05,777 [INFO] Ziel im Ring bei (316, 178)
+2026-08-06 10:57:06,335 [DEBUG] popup=(248, 221, 65) ziel=kein Ziel im_ring=False
+2026-08-06 10:57:07,442 [DEBUG] popup=(248, 221, 65) ziel=(235, 170) im_ring=True
+2026-08-06 10:57:07,442 [INFO] Ziel im Ring bei (287, 182)
+2026-08-06 10:57:07,716 [INFO] Ziel im Ring bei (343, 225)
+2026-08-06 10:57:08,002 [INFO] Ziel im Ring bei (368, 243)
+2026-08-06 10:57:08,259 [INFO] Ziel im Ring bei (368, 243)
+2026-08-06 10:57:08,544 [DEBUG] popup=(248, 221, 65) ziel=(263, 238) im_ring=True
+2026-08-06 10:57:08,544 [INFO] Ziel im Ring bei (315, 250)
+2026-08-06 10:57:08,820 [INFO] Ziel im Ring bei (251, 263)

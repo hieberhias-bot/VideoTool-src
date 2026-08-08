@@ -17,7 +17,7 @@ VK_LBUTTON = 0x01
 # Repository vorhanden, daher hier nur kompensiert statt an der Wurzel
 # behoben). Nach einem Firmware-Flash oder einer Aufloesungsaenderung mit
 # test_klick_offset.py neu validieren/anpassen.
-KLICK_OFFSET_X_PX = 15
+KLICK_OFFSET_X_PX = 0
 KLICK_OFFSET_Y_PX = 0
 
 # Gueltige Namen fuer taste_druecken()/taste_halten()/taste_loslassen().
@@ -36,6 +36,56 @@ _TASTEN_ERLAUBT = set(
 TASTEN_ERLAUBT = _TASTEN_ERLAUBT
 
 
+
+
+def _virtueller_desktop_ursprung():
+    """Obere linke Ecke des virtuellen Desktops (SM_XVIRTUALSCREEN=76/
+    SM_YVIRTUALSCREEN=77) - bei einem Monitor LINKS/OBERHALB des primaeren
+    Monitors NICHT (0, 0), sondern negativ. GetCursorPos()/absolute
+    Bildschirmkoordinaten liegen bereits in diesem (ggf. negativen)
+    Koordinatensystem - fuer die 16-Bit-HID-Umrechnung (siehe _pixel_zu_hid())
+    muss eine Zielposition daher relativ zu DIESEM Ursprung ausgedrueckt
+    werden, nicht relativ zu (0, 0)."""
+    x = ctypes.windll.user32.GetSystemMetrics(76)
+    y = ctypes.windll.user32.GetSystemMetrics(77)
+    return x, y
+
+
+def _virtueller_desktop_groesse():
+    """Ermittelt die Groesse des GESAMTEN virtuellen Desktops (alle Monitore
+    zusammen) via GetSystemMetrics(SM_CXVIRTUALSCREEN=78 / SM_CYVIRTUALSCREEN=79)
+    - NICHT nur der primaere Monitor (GetSystemMetrics(0)/(1), das waere nur
+    EIN Monitor bei Multi-Monitor-Setups). Die Arduino-Firmware interpretiert
+    MOVE_ABS seit dem Firmware-Umbau als 16-Bit-HID-Koordinate (0..32767)
+    relativ zum GESAMTEN virtuellen Desktop, nicht mehr als Pixel - IMMER
+    dynamisch ermittelt, NIE hartkodiert (Aufloesung/Monitor-Layout kann sich
+    zwischen Sitzungen/Maschinen unterscheiden, z.B. 3137x946 bei einem
+    aktuell beobachteten Multi-Monitor-Setup)."""
+    breite = ctypes.windll.user32.GetSystemMetrics(78)
+    hoehe = ctypes.windll.user32.GetSystemMetrics(79)
+    return breite, hoehe
+
+
+def _pixel_zu_hid(px, py):
+    """Rechnet eine ABSOLUTE Bildschirmposition (px, py, wie von GetCursorPos()
+    gelieferte/erwartete Koordinaten) in eine 16-Bit-HID-Koordinate (0..32767)
+    um - relativ zum GESAMTEN virtuellen Desktop (siehe
+    _virtueller_desktop_ursprung()/_virtueller_desktop_groesse()), wie es die
+    Firmware fuer MOVE_ABS jetzt erwartet:
+
+        hx = round((px - ursprung_x) * 32767 / (virt_breite - 1))
+        hy = round((py - ursprung_y) * 32767 / (virt_hoehe - 1))
+
+    Wird zusaetzlich auf [0, 32767] geklemmt (Positionen ausserhalb des
+    virtuellen Desktops - sollte praktisch nicht vorkommen, aber schuetzt vor
+    einem ungueltigen HID-Wert)."""
+    vx, vy = _virtueller_desktop_ursprung()
+    vw, vh = _virtueller_desktop_groesse()
+    hx = round((px - vx) * 32767 / (vw - 1))
+    hy = round((py - vy) * 32767 / (vh - 1))
+    hx = max(0, min(32767, hx))
+    hy = max(0, min(32767, hy))
+    return hx, hy
 
 
 _BEKANNTE_VID_PID = (
@@ -202,13 +252,17 @@ class HIDMaus:
             self.ser = serial.Serial(self.port, self.baud, timeout=self.timeout)
             time.sleep(2)  # Arduino-Reset abwarten
             self.verbunden = True
-            # Echte Bildschirmaufloesung ermitteln - die Firmware klemmt
-            # MOVE_ABS intern fix auf 1920x1080, unabhaengig davon, ob der
-            # tatsaechliche Bildschirm davon abweicht (siehe maus_bewegen_abs()).
+            # Primaerer Monitor NUR fuer die Diagnoseausgabe unten - die
+            # eigentliche MOVE_ABS-Umrechnung (siehe maus_bewegen()/
+            # _pixel_zu_hid()) nutzt IMMER die GESAMTE virtuelle Desktop-
+            # Groesse (alle Monitore), frisch bei jeder Bewegung ermittelt,
+            # nicht diese gecachten Werte.
             self.screen_w = ctypes.windll.user32.GetSystemMetrics(0)
             self.screen_h = ctypes.windll.user32.GetSystemMetrics(1)
+            virt_w, virt_h = _virtueller_desktop_groesse()
             print(f"[HIDMaus] Verbunden mit {self.port} "
-                  f"(Bildschirm {self.screen_w}x{self.screen_h})")
+                  f"(primaerer Monitor {self.screen_w}x{self.screen_h}, "
+                  f"virtueller Desktop {virt_w}x{virt_h})")
             return True
         except Exception as e:
             print(f"[HIDMaus] Fehler beim Verbinden: {e}")
@@ -250,38 +304,52 @@ class HIDMaus:
 
     def maus_bewegen(self, dx, dy):
         """Bewegt die Maus zur ABSOLUTEN Bildschirmposition (dx, dy) ueber die
-        HID-Firmware (Aufloesung 1920x1080) - trotz der Parameternamen dx/dy
-        (Signatur unveraendert) KEINE relative Bewegung mehr, sondern ein
-        MOVE_ABS mit absoluten Koordinaten.
+        HID-Firmware - trotz der Parameternamen dx/dy (Signatur unveraendert)
+        KEINE relative Bewegung, sondern ein MOVE_ABS mit absoluten
+        Koordinaten.
+
+        Die Firmware erwartet MOVE_ABS seit dem Firmware-Umbau als 16-Bit-
+        HID-Koordinate (0..32767), NICHT mehr als Pixel - die Umrechnung
+        (siehe _pixel_zu_hid()) verwendet dafuer die Groesse des GESAMTEN
+        virtuellen Desktops (alle Monitore), IMMER dynamisch ermittelt statt
+        wie frueher hartkodiert auf 1920x1080 geklemmt/reskaliert.
+
+        Liest nach dem Senden die tatsaechliche Cursor-Position zurueck
+        (siehe _aktuelle_position()) und korrigiert eine Abweichung direkt
+        per SetCursorPos - faengt sowohl Rundungsfehler der 16-Bit-
+        Quantisierung als auch den (aktuell auf 0 stehenden) KLICK_OFFSET_X_PX/
+        Y_PX-Korrekturwert ab.
         """
         try:
-            # KLICK_OFFSET_X_PX/Y_PX VOR dem Clamp/Rescale auf das gewuenschte
-            # Bildschirmziel addieren (siehe Konstanten-Doku oben) - dadurch
-            # komponiert die Korrektur korrekt mit der Y-Reskalierung darunter.
-            x = max(0, min(1919, int(dx) + KLICK_OFFSET_X_PX))
-            y = max(0, min(1079, int(dy) + KLICK_OFFSET_Y_PX))
-            # Firmware klemmt auf 1920x1080, aber die Session ist nur screen_h
-            # hoch (z.B. 955). Windows skaliert das gesendete Y dann herunter:
-            # 191 -> 191*955/1080 = 169 (die konstanten ~22px Abweichung).
-            # Deshalb Y vorab in den 1080er-Raum hochskalieren, damit es im
-            # screen_h-Raum korrekt ankommt.
-            if self.screen_h and self.screen_h != 1080:
-                y = int(round(y * (1080.0 / self.screen_h)))
+            # KLICK_OFFSET_X_PX/Y_PX VOR der 16-Bit-Umrechnung auf das
+            # gewuenschte Bildschirmziel addieren (siehe Konstanten-Doku oben).
+            ziel_x = int(dx) + KLICK_OFFSET_X_PX
+            ziel_y = int(dy) + KLICK_OFFSET_Y_PX
         except (TypeError, ValueError) as e:
             print(f"[HIDMaus] Ungueltige Position ({dx}, {dy}): {e}")
             return False
-        return self._senden(f"MOVE_ABS {x} {y}", "MOVED")
+
+        hx, hy = _pixel_zu_hid(ziel_x, ziel_y)
+        if not self._senden(f"MOVE_ABS {hx} {hy}", "MOVED"):
+            return False
+
+        ist_x, ist_y = self._aktuelle_position()
+        if ist_x != ziel_x or ist_y != ziel_y:
+            ctypes.windll.user32.SetCursorPos(ziel_x, ziel_y)
+        return True
 
     def _aktuelle_position(self):
         """Liest die tatsaechliche Cursor-Position per GetCursorPos() aus -
         im Gegensatz zu SetCursorPos() funktioniert das Auslesen zuverlaessig
-        und dient maus_bewegen_abs() als Ist-Wert fuer die Korrekturschleife."""
+        und dient maus_bewegen() als Ist-Wert fuer den Abweichungs-Abgleich
+        nach dem MOVE_ABS-Befehl."""
         punkt = wintypes.POINT()
         ctypes.windll.user32.GetCursorPos(ctypes.byref(punkt))
         return punkt.x, punkt.y
 
     def maus_bewegen_abs(self, x, y):
-        """Absolute Bewegung - delegiert an maus_bewegen (praezise, ohne Korrekturschleife)."""
+        """Absolute Bewegung - delegiert vollstaendig an maus_bewegen()
+        (identische 16-Bit-Umrechnung + Abweichungs-Korrektur, siehe dort)."""
         return self.maus_bewegen(x, y)
 
     def maus_ziehen(self, x, y):

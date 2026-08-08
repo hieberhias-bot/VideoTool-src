@@ -58,6 +58,15 @@ except Exception as _fb_err:
     FISH_BOT_IMPORT_ERR = _fb_err
     fish_bot = None
 
+# Bild-Erkennung (fuer die Bildauswahl der Fenster-Eckpruefung im Fisch-Bot-
+# Tab, siehe fish_bot.eckpruefung_laden()/_eckpruefung_bauen()) - optional
+try:
+    import bild_erkennung
+    BILD_ERKENNUNG_OK = True
+except Exception:
+    BILD_ERKENNUNG_OK = False
+    bild_erkennung = None
+
 # Aktionsbasierte Bot-Skripte (getrennt vom aelteren ablauf_*.json-System) -
 # optional, App laeuft auch ohne
 try:
@@ -68,6 +77,41 @@ except Exception as _ak_err:
     AKTION_OK = False
     AKTION_IMPORT_ERR = _ak_err
     AktionsSkriptTab = None
+
+# Paralleles Makro-System (mehrere Bot-Skripte gleichzeitig + Fisch-Bot ueber
+# einen gemeinsamen MausDispatcher, siehe maus_dispatcher.py/makro_manager.py)
+# - optional, App laeuft auch ohne (MAKRO TOOLS-Reiter zeigt dann nur einen
+# Hinweis statt der Skript-Liste).
+try:
+    import aktion_skript
+    import modules.fenster as fenster_modul
+    from maus_dispatcher import MausDispatcher, PRIORITAET_HOCH, PRIORITAET_MITTEL, PRIORITAET_NIEDRIG
+    from makro_manager import MakroManager, MakroManagerFehler, FISCHBOT_NAME
+    MAKRO_OK = True
+    MAKRO_IMPORT_ERR = None
+except Exception as _makro_err:
+    MAKRO_OK = False
+    MAKRO_IMPORT_ERR = _makro_err
+    MausDispatcher = None
+    MakroManager = None
+    MakroManagerFehler = Exception
+    fenster_modul = None
+    PRIORITAET_HOCH, PRIORITAET_MITTEL, PRIORITAET_NIEDRIG = "HOCH", "MITTEL", "NIEDRIG"
+    FISCHBOT_NAME = "__fischbot__"
+
+# "Alle Fenster" ist die Standard-Auswahl im Fenster-Dropdown jeder
+# MAKRO-TOOLS-Zeile (siehe _makro_zeile_bauen()) - startet bei mehreren
+# offenen Spielfenstern automatisch je EINE isolierte Instanz pro Fenster
+# (siehe makro_manager.MakroManager.starte_makro_alle_fenster()).
+FENSTER_AUSWAHL_ALLE = "Alle Fenster"
+
+# Nur im Fisch-Tab-Dropdown (siehe _fish_fenster_liste_aktualisieren()):
+# manuell per Maus aufgezogener Bildschirmbereich (siehe modules.fenster.
+# bereich_manuell_auswaehlen()) statt automatischer GetWindowRect()-Erkennung
+# - fuer den Fall, dass andere Fenster das Zielfenster ueberlappen und die
+# automatische Erkennung dadurch falschen Bildschirminhalt einfangen wuerde
+# (siehe live_erkennung_vorschau.py, wo dasselbe Problem zuerst auftrat).
+FENSTER_AUSWAHL_MANUELL = "Manueller Bereich..."
 
 
 class _TkLogHandler(logging.Handler):
@@ -338,6 +382,16 @@ class CommandCenter:
         self.hid_maus = None            # HIDMaus-Instanz oder None
         self.hid_port = ""  # leer = Auto-Detect          # Standard-Port fuer die HID-Maus
 
+        # Paralleles Makro-System (mehrere Bot-Skripte + Fisch-Bot gleich-
+        # zeitig ueber einen gemeinsamen MausDispatcher, siehe MAKRO
+        # TOOLS-Reiter/_build_fish_tab()-Erweiterung). maus_getter greift
+        # lazy auf self.hid_maus zu - zum Zeitpunkt dieser Zuweisung ist die
+        # HID-Maus noch nicht verbunden (_hid_maus_init() laeuft erst
+        # danach), das ist unproblematisch, da der Getter erst bei einem
+        # tatsaechlichen Makro-Start ausgewertet wird.
+        self.makro_manager = MakroManager(
+            maus_getter=lambda: self.hid_maus, log=self._log_makro) if MAKRO_OK else None
+
         self._setup_style()
         self._setup_tabs()
         self._hid_maus_init()
@@ -445,7 +499,8 @@ class CommandCenter:
         if AKTION_OK:
             self.tab_bot_skripte = AktionsSkriptTab(
                 self.notebook, BASE_DIR, lambda: self.hid_maus, self._log_fish,
-                fremd_aktiv_getter=lambda: BotStatus.fishbot_laeuft)
+                fremd_aktiv_getter=lambda: BotStatus.fishbot_laeuft,
+                on_save_callback=self._makro_skriptlisten_aktualisieren)
             self.notebook.add(self.tab_bot_skripte, text="Bot-Skripte")
         else:
             self.tab_bot_skripte = None
@@ -456,12 +511,41 @@ class CommandCenter:
                       % AKTION_IMPORT_ERR,
                       foreground="#f38ba8").pack(padx=20, pady=20, anchor="w")
 
+        # MAKRO TOOLS-Tab (paralleles Makro-System, siehe makro_manager.py) -
+        # mehrere Bot-Skripte GLEICHZEITIG, im Gegensatz zum "nur ein Ablauf"-
+        # Verhalten des Bot-Skripte-Tabs oben.
+        self.tab_makro = ttk.Frame(self.notebook)
+        self.notebook.add(self.tab_makro, text="MAKRO TOOLS")
+        if not MAKRO_OK:
+            ttk.Label(self.tab_makro,
+                      text="Makro-System konnte nicht geladen werden:\n%s"
+                      % MAKRO_IMPORT_ERR,
+                      foreground="#f38ba8").pack(padx=20, pady=20, anchor="w")
+
         self.notebook.add(self.tab_config, text="Config / Arduino")
+
+        # Fenster-Ecken-Tab (siehe fish_bot.fenster_eckpruefung_bestehen()) -
+        # EIN zentraler Ort fuer die Eckbereich-Bild-Zuordnung + -Groesse,
+        # bewusst NICHT im Fisch-Tab versteckt: die Pruefung greift bei JEDEM
+        # automatischen Fenster-Start (Fisch-Bot, MAKRO TOOLS, Bot-Skripte),
+        # nicht nur beim Fisch-Bot.
+        self.tab_ecken = ttk.Frame(self.notebook)
+        self.notebook.add(self.tab_ecken, text="Fenster-Ecken")
 
         self._build_fish_tab()
         self._build_aufnahme_tab()
         self._build_skripte_tab()
+        self._build_makro_tab()
         self._build_config_tab()
+        self._build_ecken_tab()
+
+        # Frueh (nicht erst beim ersten Fisch-Bot-Start) verdrahten: die
+        # Fenster-Eckpruefung (siehe fish_bot.fenster_eckpruefung_bestehen())
+        # laeuft jetzt auch bei MAKRO TOOLS/Bot-Skripten OHNE dass der Fisch-
+        # Bot je gestartet wurde - deren Log-Zeilen (welche Ecke fehlschlug)
+        # sollen trotzdem im Fisch-Tab-Log sichtbar sein, nicht erst danach.
+        if FISH_BOT_OK:
+            self._fish_bot_log_verdrahten()
 
         self.root.bind("<F5>", lambda e: self._fish_start())
         self.root.bind("<F6>", lambda e: self._fish_pause())
@@ -546,6 +630,39 @@ class CommandCenter:
 
         self._refresh_sequenz_combo()
 
+        # Paralleles Bot-Skript (laeuft GLEICHZEITIG mit dem Fisch-Bot ueber
+        # den gemeinsamen MausDispatcher, siehe MAKRO TOOLS-Reiter/
+        # makro_manager.py - im Gegensatz zu "Vor-Start Ablaeufe"/"Sequenz
+        # vor Automation" oben, die VOR dem Fisch-Bot-Start einmalig laufen).
+        if MAKRO_OK:
+            makro_frame = ttk.LabelFrame(frame, text="Paralleles Skript (waehrend Fisch-Bot laeuft)")
+            makro_frame.pack(fill="x", padx=20, pady=5)
+
+            self.var_fish_makro_parallel = tk.BooleanVar(value=False)
+            ttk.Checkbutton(makro_frame, text="Skript parallel zum Fish-Bot starten",
+                            variable=self.var_fish_makro_parallel,
+                            command=self._toggle_fish_makro_parallel).grid(
+                row=0, column=0, columnspan=4, padx=10, pady=5, sticky="w")
+
+            ttk.Label(makro_frame, text="Skript:").grid(row=1, column=0, padx=10, pady=3, sticky="w")
+            self.combo_fish_makro_skript = ttk.Combobox(makro_frame, state="disabled", width=25)
+            self.combo_fish_makro_skript.grid(row=1, column=1, padx=5, sticky="w")
+
+            ttk.Label(makro_frame, text="Prioritaet:").grid(row=1, column=2, padx=10, sticky="w")
+            self.var_fish_makro_prioritaet = tk.StringVar(value=PRIORITAET_MITTEL)
+            self.combo_fish_makro_prioritaet = ttk.Combobox(
+                makro_frame, textvariable=self.var_fish_makro_prioritaet, state="disabled", width=9,
+                values=[PRIORITAET_HOCH, PRIORITAET_MITTEL, PRIORITAET_NIEDRIG])
+            self.combo_fish_makro_prioritaet.grid(row=1, column=3, padx=5, sticky="w")
+
+            ttk.Label(makro_frame,
+                      text="Fisch-Bot selbst laeuft dabei mit Prioritaet HOCH.",
+                      foreground="#a6adc8").grid(row=2, column=0, columnspan=4, padx=10, pady=(0, 5), sticky="w")
+
+            self._refresh_fish_makro_combo()
+        else:
+            self.var_fish_makro_parallel = None
+
         # Fenster
         fenster_frame = ttk.LabelFrame(frame, text="Ziel-Fenster")
         fenster_frame.pack(fill="x", padx=20, pady=5)
@@ -555,6 +672,28 @@ class CommandCenter:
         self.fish_fenster.insert(0, "Metin2")
         ttk.Label(fenster_frame, text="  (Hotkey: F5=Start, F6=Pause, F7=Stop)",
                   foreground="#a6adc8").grid(row=0, column=2, padx=10)
+
+        # Mehrfenster-Unterstuetzung (siehe MAKRO TOOLS-Reiter/makro_manager.
+        # MakroManager.fischbot_starten_alle_fenster()) - genau dieselbe
+        # Fenster-Auswahl wie bei den Bot-Skripten: "Alle Fenster" (Standard)
+        # startet bei mehreren offenen Spielfenstern automatisch je EINEN
+        # isolierten Fisch-Bot pro Fenster, eine konkrete "Fenster N"-Auswahl
+        # isoliert eine einzelne Instanz auf genau dieses Fenster.
+        if MAKRO_OK:
+            ttk.Label(fenster_frame, text="Mehrere Fenster:").grid(
+                row=1, column=0, padx=10, pady=5, sticky="w")
+            self.var_fish_fenster_wahl = tk.StringVar(value=FENSTER_AUSWAHL_ALLE)
+            self.combo_fish_fenster_wahl = ttk.Combobox(
+                fenster_frame, textvariable=self.var_fish_fenster_wahl, state="readonly", width=14,
+                values=[FENSTER_AUSWAHL_ALLE])
+            self.combo_fish_fenster_wahl.grid(row=1, column=1, padx=5, sticky="w")
+            ttk.Button(fenster_frame, text="Aktualisieren",
+                       command=self._fish_fenster_liste_aktualisieren).grid(row=1, column=2, padx=10)
+            self.lbl_fish_fenster_status = ttk.Label(fenster_frame, text="", foreground="#f9e2af")
+            self.lbl_fish_fenster_status.grid(row=2, column=0, columnspan=3, padx=10, pady=(0, 5), sticky="w")
+            self._fish_fenster_liste_aktualisieren()
+        else:
+            self.var_fish_fenster_wahl = None
 
         # Erkennung
         erk_frame = ttk.LabelFrame(frame, text="Erkennung")
@@ -649,6 +788,142 @@ class CommandCenter:
     def _toggle_seq_vor_start(self):
         state = "readonly" if self.var_seq_vor_start.get() else "disabled"
         self.combo_aktive_sequenz.config(state=state)
+
+    def _toggle_fish_makro_parallel(self):
+        state = "readonly" if self.var_fish_makro_parallel.get() else "disabled"
+        self.combo_fish_makro_skript.config(state=state)
+        self.combo_fish_makro_prioritaet.config(state=state)
+
+    def _refresh_fish_makro_combo(self):
+        namen = aktion_skript.verfuegbare_skripte() if MAKRO_OK else []
+        aktuell = self.combo_fish_makro_skript.get()
+        self.combo_fish_makro_skript["values"] = namen
+        if aktuell not in namen:
+            self.combo_fish_makro_skript.set(namen[0] if namen else "")
+
+    _ECKEN_LABELS = [("oben_links", "Oben-Links:"), ("oben_rechts", "Oben-Rechts:"),
+                     ("unten_links", "Unten-Links:"), ("unten_rechts", "Unten-Rechts:")]
+
+    def _build_ecken_tab(self):
+        """Baut den eigenstaendigen "Fenster-Ecken"-Tab: je Ecke ein Dropdown
+        mit einem bilder_szenen-Bild (siehe fish_bot.eckpruefung_laden()/
+        _speichern()) - EIN zentraler, dauerhaft gespeicherter Ort fuer diese
+        Zuordnung, bewusst NICHT in einem der Werkzeug-Tabs versteckt: der
+        Check (siehe fish_bot.fenster_eckpruefung_bestehen()) laeuft bei
+        JEDEM automatischen (NICHT manuellen) Fenster-Start durch ALLE drei
+        Werkzeuge - Fisch-Bot (fish_bot.bot_starten()), MAKRO TOOLS
+        (makro_manager.MakroManager.starte_makro()) UND Bot-Skripte
+        (aktion_editor.AktionsSkriptTab._ausfuehren_start()) - bevor
+        irgendetwas losklickt/-tippt. Schuetzt vor einem faelschlich/falsch
+        positioniert erkannten Fenster (z.B. durch ein DPI-/Skalierungsproblem,
+        siehe fish_bot.screenshot_holen()-Diagnose)."""
+        frame = self.tab_ecken
+        ttk.Label(frame, text="FENSTER-ECKEN", style="Header.TLabel").pack(
+            anchor="w", padx=20, pady=(15, 5))
+        ttk.Label(frame,
+                  text="Gilt fuer JEDEN automatischen Fenster-Start - Fisch-Bot, MAKRO TOOLS und "
+                       "Bot-Skripte - bis hier wieder etwas geaendert wird.",
+                  foreground="#a6adc8").pack(anchor="w", padx=20)
+
+        self._eck_combos = {}
+        if not (FISH_BOT_OK and BILD_ERKENNUNG_OK):
+            ttk.Label(frame, text="Fisch-Bot- und/oder Bild-Erkennungs-Modul nicht verfuegbar - "
+                                  "Fenster-Eckpruefung deaktiviert.",
+                      foreground="#f38ba8").pack(padx=20, pady=20, anchor="w")
+            return
+
+        eck_frame = ttk.LabelFrame(frame, text="Fenster-Pruefung (Ecken)")
+        eck_frame.pack(fill="x", padx=20, pady=15)
+
+        zuordnung = fish_bot.eckpruefung_laden()
+        bilder_werte = [""] + bild_erkennung.verfuegbare_bilder()
+
+        for i, (key, text) in enumerate(self._ECKEN_LABELS):
+            row, col = divmod(i, 2)
+            ttk.Label(eck_frame, text=text).grid(row=row, column=col * 2, padx=10, pady=5, sticky="w")
+            combo = ttk.Combobox(eck_frame, state="readonly", width=20, values=bilder_werte)
+            combo.set(zuordnung.get(key, ""))
+            combo.grid(row=row, column=col * 2 + 1, padx=5, pady=5, sticky="w")
+            combo.bind("<<ComboboxSelected>>", lambda e, k=key: self._eckpruefung_geaendert(k))
+            self._eck_combos[key] = combo
+
+        ttk.Label(eck_frame,
+                  text="Mind. 2 der konfigurierten Ecken muessen beim automatischen Start erkannt "
+                       "werden (Fisch-Bot, MAKRO TOOLS, Bot-Skripte), sonst Abbruch (gilt NICHT fuer "
+                       "'Manueller Bereich'). Leer = keine Pruefung.",
+                  foreground="#a6adc8", wraplength=600, justify="left").grid(
+            row=2, column=0, columnspan=4, padx=10, pady=(0, 5), sticky="w")
+
+        # Eckbereich-Groesse (Anteil der Fensterbreite/-hoehe, der je Ecke
+        # durchsucht wird, siehe fish_bot._eckbereich_koordinaten()) - EINMAL
+        # hier eingestellt, dauerhaft in derselben Datei wie die Bild-
+        # Zuordnung gespeichert (siehe fish_bot.eckpruefung_speichern()) und
+        # gilt GLOBAL fuer JEDEN Aufrufer der Eckpruefung (Fisch-Bot, MAKRO
+        # TOOLS UND Bot-Skripte), bis sie hier wieder geaendert wird.
+        ttk.Label(eck_frame, text="Eckbereich-Groesse:").grid(
+            row=3, column=0, padx=10, pady=5, sticky="w")
+        self.var_eck_anteil = tk.DoubleVar(value=round(zuordnung["anteil"] * 100))
+        self.scale_eck_anteil = ttk.Scale(
+            eck_frame, from_=fish_bot.ECKBEREICH_ANTEIL_MIN * 100, to=fish_bot.ECKBEREICH_ANTEIL_MAX * 100,
+            variable=self.var_eck_anteil, command=self._eckpruefung_anteil_vorschau, length=150)
+        self.scale_eck_anteil.grid(row=3, column=1, padx=5, pady=5, sticky="w")
+        self.lbl_eck_anteil = ttk.Label(eck_frame, text="%d%% der Fenstergroesse je Ecke"
+                                        % round(zuordnung["anteil"] * 100))
+        self.lbl_eck_anteil.grid(row=3, column=2, columnspan=2, padx=5, pady=5, sticky="w")
+        self.scale_eck_anteil.bind("<ButtonRelease-1>", lambda e: self._eckpruefung_anteil_speichern())
+
+    def _eckpruefung_geaendert(self, key):
+        zuordnung = fish_bot.eckpruefung_laden()
+        zuordnung[key] = self._eck_combos[key].get()
+        fish_bot.eckpruefung_speichern(zuordnung)
+
+    def _eckpruefung_anteil_vorschau(self, wert):
+        """Aktualisiert nur die %-Anzeige waehrend des Ziehens am Regler -
+        das eigentliche Speichern (siehe _eckpruefung_anteil_speichern())
+        passiert erst beim Loslassen, damit nicht bei jedem Pixel Bewegung
+        auf die Festplatte geschrieben wird."""
+        self.lbl_eck_anteil.config(text="%d%% der Fenstergroesse je Ecke" % round(float(wert)))
+
+    def _eckpruefung_anteil_speichern(self):
+        zuordnung = fish_bot.eckpruefung_laden()
+        zuordnung["anteil"] = self.var_eck_anteil.get() / 100.0
+        fish_bot.eckpruefung_speichern(zuordnung)
+
+    def _fish_fenster_liste_aktualisieren(self):
+        """Aktualisiert die "X Spielfenster gefunden"-Anzeige + das Fenster-
+        Dropdown im Fisch-Tab (siehe modules.fenster.alle_spielfenster_finden())
+        - dasselbe Muster wie CommandCenter._makro_fenster_liste_aktualisieren()
+        im MAKRO TOOLS-Reiter."""
+        if not MAKRO_OK or self.var_fish_fenster_wahl is None:
+            return []
+        fenster_liste = fenster_modul.alle_spielfenster_finden()
+        n = len(fenster_liste)
+        text = "%d Spielfenster gefunden" % n if n != 1 else "1 Spielfenster gefunden"
+        self.lbl_fish_fenster_status.config(text=text)
+
+        werte = [FENSTER_AUSWAHL_ALLE, FENSTER_AUSWAHL_MANUELL] + \
+            ["Fenster %d" % f["nummer"] for f in fenster_liste]
+        self.combo_fish_fenster_wahl["values"] = werte
+        if self.var_fish_fenster_wahl.get() not in werte:
+            self.var_fish_fenster_wahl.set(FENSTER_AUSWAHL_ALLE)
+        return fenster_liste
+
+    def _fish_fenster_hwnd_aus_wahl(self, fenster_wahl):
+        """Loest eine "Fenster N"-Auswahl (siehe combo_fish_fenster_wahl) zum
+        aktuellen hwnd auf (frisch abgefragt - eine zuvor angezeigte Nummer
+        koennte inzwischen einem anderen Fenster gehoeren, wenn sich die
+        Fensterliste zwischenzeitlich geaendert hat). None fuer
+        FENSTER_AUSWAHL_ALLE oder wenn das gewaehlte Fenster nicht mehr
+        gefunden wird."""
+        if fenster_wahl == FENSTER_AUSWAHL_ALLE:
+            return None
+        try:
+            nummer = int(fenster_wahl.replace("Fenster", "").strip())
+        except ValueError:
+            return None
+        treffer = next((f for f in fenster_modul.alle_spielfenster_finden() if f["nummer"] == nummer),
+                       None)
+        return treffer["hwnd"] if treffer else None
 
     def _get_sequenz_namen(self):
         result = []
@@ -844,6 +1119,53 @@ class CommandCenter:
         self.btn_fish_stop.config(state="normal")
         self._log_fish("Fisch-Bot gestartet (HID-Port %s)." % self.hid_port)
 
+        fenster_wahl = (self.var_fish_fenster_wahl.get()
+                        if MAKRO_OK and self.var_fish_fenster_wahl is not None
+                        else FENSTER_AUSWAHL_ALLE)
+        parallel_aktiv = (MAKRO_OK and self.var_fish_makro_parallel is not None
+                          and self.var_fish_makro_parallel.get())
+        parallel_skript = self.combo_fish_makro_skript.get().strip() if parallel_aktiv else ""
+
+        if MAKRO_OK and fenster_wahl == FENSTER_AUSWAHL_MANUELL:
+            if parallel_aktiv and parallel_skript:
+                messagebox.showwarning(
+                    "Fisch-Bot",
+                    "'Manueller Bereich' laesst sich nicht mit einem 'Parallelen Skript' "
+                    "kombinieren. Bitte entweder ein festes Fenster waehlen oder das "
+                    "parallele Skript deaktivieren.")
+                self._fishbot_beendet("GESTOPPT")
+                return
+            self._start_fishbot_manueller_bereich()
+            return
+
+        # "Alle Fenster" + MEHRERE offene Spielfenster -> Fan-out (ein
+        # isolierter Fisch-Bot je Fenster, siehe makro_manager.
+        # MakroManager.fischbot_starten_alle_fenster()). Ist zusaetzlich ein
+        # "Paralleles Skript" aktiviert, laeuft dieses PRO Fenster ebenfalls
+        # mit (siehe MakroManager.fischbot_und_makro_starten_alle_fenster()) -
+        # also Fisch-Bot UND paralleles Skript je einmal pro Fenster, nicht
+        # nur der Fisch-Bot alleine.
+        if MAKRO_OK and fenster_wahl == FENSTER_AUSWAHL_ALLE:
+            fenster_liste = fenster_modul.alle_spielfenster_finden()
+            if len(fenster_liste) > 1:
+                if parallel_aktiv and parallel_skript:
+                    self._start_fishbot_alle_fenster_mit_makro(parallel_skript,
+                                                                self.var_fish_makro_prioritaet.get())
+                    return
+                self._start_fishbot_alle_fenster()
+                return
+
+        if parallel_aktiv and parallel_skript:
+            self._start_fishbot_als_makro(parallel_skript, self.var_fish_makro_prioritaet.get(), fenster_wahl)
+            return
+
+        if MAKRO_OK and fenster_wahl != FENSTER_AUSWAHL_ALLE:
+            self._start_fishbot_isoliert(fenster_wahl)
+            return
+
+        # "Alle Fenster" mit hoechstens einem gefundenen Fenster (oder
+        # MAKRO_OK nicht verfuegbar): bisheriges Verhalten unveraendert -
+        # direkte HID-Verbindung, kein MakroManager noetig.
         # Bereits verbundene HID-Maus (Config-Tab) wiederverwenden, statt eine
         # zweite Verbindung auf denselben COM-Port zu versuchen (schlaegt
         # sonst i.d.R. fehl, da ein Port nur eine offene Verbindung erlaubt).
@@ -860,6 +1182,116 @@ class CommandCenter:
         self._fishbot_thread = threading.Thread(target=lauf, daemon=True)
         self._fishbot_thread.start()
 
+    def _start_fishbot_isoliert(self, fenster_wahl):
+        """Startet EINE Fisch-Bot-Instanz, isoliert auf das per 'fenster_wahl'
+        ausgewaehlte Fenster (z.B. "Fenster 2") - ueber den MakroManager,
+        da nur der einen fenster_provider an fish_bot.bot_starten()
+        durchreichen kann (siehe makro_manager.MakroManager.fish_bot_starten())."""
+        hwnd = self._fish_fenster_hwnd_aus_wahl(fenster_wahl)
+        if hwnd is None:
+            messagebox.showerror("Fisch-Bot", "'%s' ist gerade nicht (mehr) offen." % fenster_wahl)
+            self._fishbot_beendet("VERBINDUNGSFEHLER")
+            return
+        try:
+            self.makro_manager.fish_bot_starten(prioritaet=PRIORITAET_HOCH, fenster_hwnd=hwnd,
+                                                 fenster_label=fenster_wahl)
+        except MakroManagerFehler as e:
+            self._log_fish("Fisch-Bot konnte nicht gestartet werden: %s" % e)
+            self._fishbot_beendet("VERBINDUNGSFEHLER")
+            return
+        self._warte_auf_fischbot_ende()
+
+    def _start_fishbot_manueller_bereich(self):
+        """Startet EINE Fisch-Bot-Instanz auf einen manuell aufgezogenen
+        Bildschirmbereich isoliert (siehe modules.fenster.
+        bereich_manuell_auswaehlen()) - Alternative zu _start_fishbot_isoliert()
+        fuer den Fall, dass die automatische hwnd-basierte Fenstererkennung
+        falsch liegt (z.B. weil ein anderes Fenster das Zielfenster
+        ueberlappt). Wird bei JEDEM Start neu abgefragt statt gespeichert, da
+        sich Fensterpositionen zwischen Bot-Starts aendern koennen."""
+        self._log_fish("Manueller Bereich: bitte im Overlay den zu beobachtenden Bereich aufziehen...")
+        bereich = fenster_modul.bereich_manuell_auswaehlen(master=self.root)
+        if bereich is None:
+            self._log_fish("Manueller Bereich abgebrochen - Fisch-Bot nicht gestartet.")
+            self._fishbot_beendet("GESTOPPT")
+            return
+        try:
+            self.makro_manager.fish_bot_starten(prioritaet=PRIORITAET_HOCH, fenster_bereich=bereich,
+                                                 fenster_label=FENSTER_AUSWAHL_MANUELL)
+        except MakroManagerFehler as e:
+            self._log_fish("Fisch-Bot konnte nicht gestartet werden: %s" % e)
+            self._fishbot_beendet("VERBINDUNGSFEHLER")
+            return
+        self._warte_auf_fischbot_ende()
+
+    def _start_fishbot_alle_fenster(self):
+        """Startet je EINE isolierte Fisch-Bot-Instanz PRO offenem
+        Spielfenster (siehe Aufgabenstellung "separat fuer jedes Fenster")."""
+        try:
+            gestartet = self.makro_manager.fischbot_starten_alle_fenster(prioritaet=PRIORITAET_HOCH)
+        except MakroManagerFehler as e:
+            self._log_fish("Fisch-Bot konnte nicht gestartet werden: %s" % e)
+            self._fishbot_beendet("VERBINDUNGSFEHLER")
+            return
+        self._log_fish("Fisch-Bot auf %d Fenster verteilt gestartet." % len(gestartet))
+        self._warte_auf_fischbot_ende()
+
+    def _start_fishbot_als_makro(self, skript_name, prioritaet, fenster_wahl=FENSTER_AUSWAHL_ALLE):
+        """Startet Fisch-Bot UND das gewaehlte parallele Skript ueber den
+        gemeinsamen MakroManager/MausDispatcher, statt fish_bot.py direkt mit
+        der rohen HID-Maus zu verbinden - noetig, damit sich beide beim
+        Maus-Zugriff tatsaechlich korrekt abwechseln, statt sich auf der
+        seriellen Leitung zu ueberschneiden (siehe makro_manager.DispatcherMaus,
+        ein fuer fish_bot.py transparenter Wrapper). Fisch-Bot laeuft dabei
+        immer mit Prioritaet HOCH (siehe Aufgabenstellung), unabhaengig von
+        der fuer das parallele Skript gewaehlten Prioritaet.
+
+        Ist 'fenster_wahl' ein konkretes Fenster (nicht "Alle Fenster"),
+        werden BEIDE - Fisch-Bot UND das parallele Skript - auf dasselbe
+        Fenster isoliert (konsistent zu "alles fuer EIN Fenster")."""
+        hwnd = None
+        fenster_label = None
+        if fenster_wahl != FENSTER_AUSWAHL_ALLE:
+            hwnd = self._fish_fenster_hwnd_aus_wahl(fenster_wahl)
+            if hwnd is None:
+                self._log_fish("'%s' ist gerade nicht (mehr) offen - Fisch-Bot nicht gestartet." % fenster_wahl)
+                self._fishbot_beendet("VERBINDUNGSFEHLER")
+                return
+            fenster_label = fenster_wahl
+
+        try:
+            self.makro_manager.fish_bot_starten(prioritaet=PRIORITAET_HOCH, fenster_hwnd=hwnd,
+                                                 fenster_label=fenster_label)
+        except MakroManagerFehler as e:
+            self._log_fish("Fisch-Bot (als Makro) konnte nicht gestartet werden: %s" % e)
+            self._fishbot_beendet("VERBINDUNGSFEHLER")
+            return
+
+        try:
+            self.makro_manager.starte_makro(skript_name, prioritaet, fenster_hwnd=hwnd,
+                                             instanz_key=skript_name, fenster_label=fenster_label)
+        except MakroManagerFehler as e:
+            self._log_fish("Paralleles Skript '%s' konnte nicht gestartet werden: %s" % (skript_name, e))
+
+        self._warte_auf_fischbot_ende()
+
+    def _warte_auf_fischbot_ende(self):
+        """Wartet (in einem Hintergrund-Thread), bis KEINE Fisch-Bot-Instanz
+        mehr laeuft - egal ob eine einzelne (isolierte oder nicht-isolierte)
+        Instanz oder ein Mehrfenster-Fan-out (siehe _start_fishbot_alle_fenster()),
+        makro_manager.makro_laeuft(FISCHBOT_NAME) prueft ueber basis_name
+        ALLE Instanzen gemeinsam."""
+        def warten():
+            while self.makro_manager.makro_laeuft(FISCHBOT_NAME):
+                time.sleep(0.2)
+            eintraege = [e for e in self.makro_manager.laufende_makros()
+                        if e["basis_name"] == FISCHBOT_NAME]
+            status = eintraege[-1]["status"] if eintraege else "GESTOPPT"
+            self.root.after(0, lambda: self._fishbot_beendet(status))
+
+        self._fishbot_thread = threading.Thread(target=warten, daemon=True)
+        self._fishbot_thread.start()
+
     def _fishbot_beendet(self, ergebnis):
         """Wird aufgerufen, sobald der Bot-Thread sich tatsaechlich beendet
         hat (Fehler, Stopp-Anforderung oder Verbindungsfehler)."""
@@ -872,6 +1304,8 @@ class CommandCenter:
             "GESTOPPT": "gestoppt",
             "FEHLER": "mit Fehler beendet (kein Popup mehr gefunden trotz aller Versuche)",
             "VERBINDUNGSFEHLER": "HID-Maus-Verbindungsfehler (siehe Config-Tab)",
+            "FENSTERPRUEFUNG_FEHLGESCHLAGEN": "nicht gestartet - Fenster-Eckpruefung fehlgeschlagen "
+                                              "(siehe Log/Fisch-Tab 'Fenster-Pruefung')",
         }.get(ergebnis, ergebnis)
         self._log_fish("Fisch-Bot beendet: %s" % text)
 
@@ -884,10 +1318,19 @@ class CommandCenter:
     def _fish_stop(self):
         if not BotStatus.fishbot_laeuft:
             return
-        if FISH_BOT_OK:
+        # Ueber MakroManager gestartete Instanzen (isoliert und/oder Fan-out,
+        # siehe _start_fishbot_isoliert()/_start_fishbot_alle_fenster()/
+        # _start_fishbot_als_makro()) haben ihr EIGENES, vom MakroManager
+        # verwaltetes stop_event - das globale fish_bot.bot_anhalten() (ohne
+        # Kontext) wuerde dort ins Leere laufen bzw. bei einer NICHT darueber
+        # gestarteten Instanz die falsche/gar keine Instanz stoppen.
+        if MAKRO_OK and self.makro_manager.makro_laeuft(FISCHBOT_NAME):
+            gestoppt = self.makro_manager.stoppe_alle_instanzen(FISCHBOT_NAME)
+            self._log_fish("Fisch-Bot: Stopp angefordert (%d Instanz(en))..." % len(gestoppt))
+        elif FISH_BOT_OK:
             fish_bot.bot_anhalten()
+            self._log_fish("Fisch-Bot: Stopp angefordert...")
         self.btn_fish_stop.config(state="disabled")
-        self._log_fish("Fisch-Bot: Stopp angefordert...")
         # BotStatus und die uebrigen Buttons werden final in _fishbot_beendet()
         # zurueckgesetzt, sobald sich der Bot-Thread tatsaechlich beendet hat -
         # das kann (z.B. bei WARTEN-Schritten) bis zu ~100ms dauern.
@@ -1685,6 +2128,379 @@ class CommandCenter:
             self.skript_prozess.terminate()
         self.btn_skript_start.config(state="normal")
         self.btn_skript_stop.config(state="disabled")
+
+    # ---------- MAKRO TOOLS ----------
+    def _build_makro_tab(self):
+        """Baut den MAKRO TOOLS-Reiter: Liste aller aktion_*.json-Skripte
+        mit Prioritaet/Start/Stop/Status, "Stoppe alle", "Neues Skript" und
+        "Speichern unter" - siehe makro_manager.py fuer die eigentliche
+        Ausfuehrungslogik (paralleler Start mehrerer Skripte ueber einen
+        gemeinsamen MausDispatcher). Ohne verfuegbares Makro-System (siehe
+        MAKRO_OK) zeigt der Tab bereits in _setup_tabs() nur einen
+        Fehlerhinweis - hier dann nichts weiter aufbauen."""
+        frame = self.tab_makro
+        if not MAKRO_OK:
+            return
+
+        ttk.Label(frame, text="MAKRO TOOLS", style="Header.TLabel").pack(
+            anchor="w", padx=20, pady=(15, 5))
+        ttk.Label(frame,
+                  text="Mehrere Bot-Skripte gleichzeitig - hoehere Prioritaet gewinnt bei Maus-Konflikten",
+                  foreground="#a6adc8").pack(anchor="w", padx=20)
+
+        # Live-Anzeige der aktuell erkannten Spielfenster (siehe
+        # modules.fenster.alle_spielfenster_finden()) - wird zusammen mit der
+        # Skript-Liste aktualisiert (siehe _makro_liste_neu_aufbauen()), da
+        # sich beides (verfuegbare Skripte, offene Fenster) unabhaengig
+        # voneinander waehrend der Laufzeit aendern kann.
+        self.lbl_makro_fenster = ttk.Label(frame, text="", foreground="#f9e2af")
+        self.lbl_makro_fenster.pack(anchor="w", padx=20, pady=(2, 0))
+
+        steuerung = ttk.Frame(frame)
+        steuerung.pack(fill="x", padx=20, pady=10)
+        ttk.Button(steuerung, text="Neues Skript",
+                   command=self._makro_neues_skript).pack(side="left", padx=5)
+        ttk.Button(steuerung, text="Speichern unter",
+                   command=self._makro_speichern_unter).pack(side="left", padx=5)
+        ttk.Button(steuerung, text="Aktualisieren",
+                   command=self._makro_liste_neu_aufbauen).pack(side="left", padx=5)
+        ttk.Button(steuerung, text="Stoppe alle", style="Danger.TButton",
+                   command=self._makro_stoppe_alle).pack(side="left", padx=20)
+
+        kopf = ttk.Frame(frame)
+        kopf.pack(fill="x", padx=25, pady=(10, 0))
+        ttk.Label(kopf, text="Skript", foreground="#89b4fa", width=28).pack(side="left", padx=5)
+        ttk.Label(kopf, text="Prioritaet", foreground="#89b4fa", width=10).pack(side="left", padx=5)
+        ttk.Label(kopf, text="Fenster", foreground="#89b4fa", width=12).pack(side="left", padx=5)
+        ttk.Label(kopf, text="", width=8).pack(side="left", padx=5)
+        ttk.Label(kopf, text="", width=8).pack(side="left", padx=5)
+        ttk.Label(kopf, text="Status", foreground="#89b4fa", width=22).pack(side="left", padx=5)
+
+        # Scrollbarer Container fuer die Skript-Zeilen (Canvas + Frame - die
+        # Anzahl der Skripte kann variieren, jede Zeile braucht echte
+        # Start/Stop-Button-Widgets statt nur Text wie in einem Treeview).
+        container = ttk.Frame(frame)
+        container.pack(fill="both", expand=False, padx=20, pady=5)
+        canvas = tk.Canvas(container, bg="#1e1e2e", highlightthickness=0, height=220)
+        vscroll = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        self.makro_zeilen_frame = ttk.Frame(canvas)
+        self.makro_zeilen_frame.bind(
+            "<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=self.makro_zeilen_frame, anchor="nw")
+        canvas.configure(yscrollcommand=vscroll.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        vscroll.pack(side="right", fill="y")
+
+        self._makro_prioritaet_vars = {}   # skript_name -> tk.StringVar
+        self._makro_fenster_vars = {}      # skript_name -> tk.StringVar ("Alle Fenster"/"Fenster N")
+        self._makro_zeilen_widgets = {}    # skript_name -> {"btn_start","btn_stop","status_label"}
+
+        ttk.Label(frame, text="Log:").pack(anchor="w", padx=20, pady=(10, 2))
+        self.makro_log = scrolledtext.ScrolledText(frame, height=8,
+                                                    bg="#11111b", fg="#a6e3a1",
+                                                    font=("Consolas", 9))
+        self.makro_log.pack(fill="both", expand=True, padx=20, pady=(0, 15))
+        self.makro_log.insert("end", "MAKRO TOOLS bereit.\n")
+
+        self._makro_liste_neu_aufbauen()
+        self._makro_status_polling()
+
+    def _makro_skriptlisten_aktualisieren(self):
+        """Aktualisiert JEDE Stelle im Command Center, die eine Liste der
+        aktion_*.json-Skripte anzeigt (MAKRO TOOLS-Liste + Fisch-Bot-
+        Skriptauswahl) - als on_save_callback an AktionsSkriptTab (Bot-
+        Skripte-Reiter) verdrahtet, damit ein dort gespeichertes Skript
+        sofort in MAKRO TOOLS/beim Fisch-Bot startbar/waehlbar ist, ohne
+        manuell 'Aktualisieren' klicken zu muessen.
+
+        hasattr()-Guards, da diese Methode theoretisch (wenn auch praktisch
+        nie, da die GUI erst nach dem vollstaendigen Aufbau interaktiv wird)
+        schon waehrend des Aufbaus selbst greifen koennte."""
+        if hasattr(self, "makro_zeilen_frame"):
+            self._makro_liste_neu_aufbauen()
+        if hasattr(self, "combo_fish_makro_skript"):
+            self._refresh_fish_makro_combo()
+
+    def _makro_fenster_liste_aktualisieren(self):
+        """Fragt die aktuell offenen Spielfenster ab (siehe
+        modules.fenster.alle_spielfenster_finden()) und aktualisiert das
+        "X Spielfenster gefunden"-Label - wird VOR jedem Neuaufbau der
+        Skript-Zeilen aufgerufen (siehe _makro_liste_neu_aufbauen()), damit
+        alle Zeilen dieselbe, konsistente Fenster-Liste fuer ihr Dropdown
+        verwenden (statt jede Zeile einzeln neu zu enumerieren).
+
+        Returns:
+            list[dict]: siehe modules.fenster.alle_spielfenster_finden().
+        """
+        fenster_liste = fenster_modul.alle_spielfenster_finden()
+        n = len(fenster_liste)
+        text = "%d Spielfenster gefunden" % n if n != 1 else "1 Spielfenster gefunden"
+        if n == 0:
+            text += " - Skripte laufen ohne Fenster-Isolation (bisheriges Verhalten)."
+        self.lbl_makro_fenster.config(text=text)
+        return fenster_liste
+
+    def _makro_liste_neu_aufbauen(self):
+        """Baut die Skript-Zeilen komplett neu auf (z.B. nach 'Aktualisieren'
+        oder einem neu angelegten/duplizierten Skript) - einfacher und fuer
+        die erwartete kleine Anzahl Skripte voellig ausreichend, statt einen
+        Diff der vorhandenen Widgets zu pflegen."""
+        fenster_liste = self._makro_fenster_liste_aktualisieren()
+
+        for w in self.makro_zeilen_frame.winfo_children():
+            w.destroy()
+        self._makro_zeilen_widgets = {}
+
+        namen = aktion_skript.verfuegbare_skripte()
+        if not namen:
+            ttk.Label(self.makro_zeilen_frame,
+                      text="Keine Skripte vorhanden - 'Neues Skript' zum Anlegen.",
+                      foreground="#a6adc8").pack(anchor="w", padx=5, pady=10)
+            return
+        for name in namen:
+            self._makro_zeile_bauen(name, fenster_liste)
+
+    def _makro_zeile_bauen(self, name, fenster_liste=()):
+        zeile = ttk.Frame(self.makro_zeilen_frame)
+        zeile.pack(fill="x", pady=2)
+
+        ttk.Label(zeile, text=name, width=28).pack(side="left", padx=5)
+
+        prio_var = self._makro_prioritaet_vars.get(name)
+        if prio_var is None:
+            prio_var = tk.StringVar(value=PRIORITAET_MITTEL)
+            self._makro_prioritaet_vars[name] = prio_var
+        ttk.Combobox(zeile, textvariable=prio_var, state="readonly", width=9,
+                     values=[PRIORITAET_HOCH, PRIORITAET_MITTEL, PRIORITAET_NIEDRIG]).pack(
+            side="left", padx=5)
+
+        # Fenster-Zuordnung (siehe FENSTER-ZUORDNUNG in der Aufgabenstellung):
+        # "Alle Fenster" (Standard) startet bei mehreren offenen Fenstern
+        # automatisch je eine isolierte Instanz pro Fenster (siehe
+        # makro_manager.starte_makro_alle_fenster()), eine konkrete "Fenster
+        # N"-Auswahl isoliert eine einzelne Instanz auf genau dieses Fenster.
+        fenster_var = self._makro_fenster_vars.get(name)
+        if fenster_var is None:
+            fenster_var = tk.StringVar(value=FENSTER_AUSWAHL_ALLE)
+            self._makro_fenster_vars[name] = fenster_var
+        fenster_werte = [FENSTER_AUSWAHL_ALLE] + ["Fenster %d" % f["nummer"] for f in fenster_liste]
+        if fenster_var.get() not in fenster_werte:
+            fenster_var.set(FENSTER_AUSWAHL_ALLE)
+        ttk.Combobox(zeile, textvariable=fenster_var, state="readonly", width=11,
+                     values=fenster_werte).pack(side="left", padx=5)
+
+        btn_start = ttk.Button(zeile, text="Start", style="Success.TButton", width=8,
+                                command=lambda n=name: self._makro_start(n))
+        btn_start.pack(side="left", padx=5)
+        btn_stop = ttk.Button(zeile, text="Stop", style="Danger.TButton", width=8,
+                               state="disabled", command=lambda n=name: self._makro_stop(n))
+        btn_stop.pack(side="left", padx=5)
+
+        btn_bearbeiten = ttk.Button(zeile, text="Bearbeiten", width=10,
+                                    command=lambda n=name: self._makro_bearbeiten(n))
+        btn_bearbeiten.pack(side="left", padx=5)
+
+        btn_loeschen = ttk.Button(zeile, text="Löschen", style="Danger.TButton", width=9,
+                                  command=lambda n=name: self._makro_loeschen(n))
+        btn_loeschen.pack(side="left", padx=5)
+
+        status_label = ttk.Label(zeile, text="gestoppt", foreground="#a6adc8", width=24)
+        status_label.pack(side="left", padx=5)
+
+        self._makro_zeilen_widgets[name] = {
+            "btn_start": btn_start, "btn_stop": btn_stop, "btn_bearbeiten": btn_bearbeiten,
+            "btn_loeschen": btn_loeschen, "status_label": status_label,
+        }
+
+    def _makro_bearbeiten(self, name):
+        """Laedt 'name' in den vollstaendigen Bot-Skripte-Editor (siehe
+        aktion_editor.AktionsSkriptTab._skript_laden()) und wechselt dorthin
+        - MAKRO TOOLS selbst hat keinen eigenen Schritt-Editor (bewusst, um
+        ihn nicht zu duplizieren), sondern startet/verwaltet nur. Funktioniert
+        auch, waehrend das Skript gerade laeuft: die laufende Instanz hat
+        ihre Schritte bereits beim Start geladen (siehe
+        makro_manager.MakroManager.starte_makro()) und ist von spaeteren
+        Bearbeitungen/dem naechsten Speichern unberuehrt, bis sie neu
+        gestartet wird."""
+        if self.tab_bot_skripte is None:
+            messagebox.showwarning("Bearbeiten", "Bot-Skripte-Editor nicht verfuegbar.")
+            return
+        self.tab_bot_skripte._skript_laden(name)
+        self.notebook.select(self.tab_bot_skripte)
+
+    def _makro_start(self, name):
+        """Startet 'name' mit der in der Zeile gewaehlten Prioritaet/
+        Fenster-Zuordnung. Bei "Alle Fenster" (Standard) UND mehreren gerade
+        offenen Spielfenstern startet makro_manager.starte_makro_alle_fenster()
+        automatisch je EINE isolierte Instanz PRO Fenster (siehe
+        Aufgabenstellung "VERHALTEN BEI MEHREREN FENSTERN + GLEICHEM
+        SKRIPT") - bei hoechstens einem gefundenen Fenster ist das Ergebnis
+        identisch zu einer einzelnen, nicht isolierten Instanz (bisheriges
+        Verhalten)."""
+        prioritaet = self._makro_prioritaet_vars[name].get()
+        fenster_wahl = self._makro_fenster_vars[name].get()
+        schritt_log = lambda makro_name, zeile: self.root.after(0, lambda: self._log_fish(zeile))
+        try:
+            if fenster_wahl == FENSTER_AUSWAHL_ALLE:
+                self.makro_manager.starte_makro_alle_fenster(name, prioritaet, schritt_log=schritt_log)
+            else:
+                fenster_liste = fenster_modul.alle_spielfenster_finden()
+                nummer = int(fenster_wahl.replace("Fenster", "").strip())
+                treffer = next((f for f in fenster_liste if f["nummer"] == nummer), None)
+                if treffer is None:
+                    messagebox.showerror(
+                        "Makro starten",
+                        "'%s' ist gerade nicht (mehr) offen - bitte 'Aktualisieren' klicken." % fenster_wahl)
+                    return
+                self.makro_manager.starte_makro(
+                    name, prioritaet, schritt_log=schritt_log,
+                    fenster_hwnd=treffer["hwnd"], instanz_key=name, fenster_label=fenster_wahl)
+        except MakroManagerFehler as e:
+            messagebox.showerror("Makro starten", str(e))
+
+    def _makro_stop(self, name):
+        """Stoppt ALLE laufenden Instanzen von 'name' - bei "Alle Fenster"-
+        Fan-out (siehe _makro_start()) i.d.R. mehrere gleichzeitig laufende,
+        je fenster-isolierte Instanzen (siehe
+        makro_manager.stoppe_alle_instanzen())."""
+        if not self.makro_manager.stoppe_alle_instanzen(name):
+            self._log_makro("Makro '%s' laeuft gerade nicht." % name)
+
+    def _makro_loeschen(self, name):
+        """Loescht ein Skript unwiderruflich (aktion_<name>.json) - blockiert,
+        waehrend es gerade laeuft (Datei unter einem laufenden Makro
+        wegzuziehen waere verwirrend, auch wenn es technisch nicht abstuerzen
+        wuerde - die Schritte sind zu Laufzeitbeginn bereits eingelesen)."""
+        if self.makro_manager.makro_laeuft(name):
+            messagebox.showwarning("Skript loeschen",
+                                   "'%s' laeuft gerade - bitte zuerst stoppen." % name)
+            return
+        if not messagebox.askyesno("Skript loeschen",
+                                   "Skript '%s' wirklich unwiderruflich loeschen?" % name):
+            return
+        aktion_skript.skript_loeschen(name)
+        self._log_makro("Skript geloescht: %s" % name)
+        self._makro_skriptlisten_aktualisieren()
+
+    def _makro_stoppe_alle(self):
+        gestoppt = self.makro_manager.stoppe_alle()
+        self._log_makro("Alle Makros gestoppt: %s" % ", ".join(gestoppt) if gestoppt
+                        else "Kein Makro lief gerade.")
+
+    def _makro_neues_skript(self):
+        """Legt ein neues, LEERES Skript an und wechselt zum Bot-Skripte-
+        Reiter, wo die vorhandene Editor-Oberflaeche (aktion_editor.py) die
+        eigentlichen Schritte bearbeiten laesst - MAKRO TOOLS dupliziert
+        diesen Editor bewusst nicht, sondern startet/verwaltet nur."""
+        name = simpledialog.askstring("Neues Skript", "Name des neuen Skripts:")
+        if not name:
+            return
+        name = name.strip()
+        if not name or any(z in name for z in ("/", "\\", "..")):
+            messagebox.showerror("Neues Skript", "Ungueltiger Name.")
+            return
+        if name in aktion_skript.verfuegbare_skripte():
+            messagebox.showerror("Neues Skript", "Ein Skript mit diesem Namen existiert bereits.")
+            return
+        aktion_skript.skript_speichern(name, [])
+        self._log_makro("Neues (leeres) Skript angelegt: %s" % name)
+        self._makro_liste_neu_aufbauen()
+        self._refresh_fish_makro_combo()
+        if self.tab_bot_skripte is not None:
+            self.notebook.select(self.tab_bot_skripte)
+        messagebox.showinfo("Neues Skript",
+                            "Leeres Skript '%s' angelegt - Schritte jetzt im Bot-Skripte-Reiter "
+                            "bearbeiten." % name)
+
+    def _makro_speichern_unter(self):
+        """Dupliziert ein vorhandenes Skript unter einem neuen Namen - nutzt
+        dieselbe Lade-/Speicherlogik wie der Bot-Skripte-Editor
+        (aktion_skript.skript_laden()/skript_speichern())."""
+        namen = aktion_skript.verfuegbare_skripte()
+        if not namen:
+            messagebox.showwarning("Speichern unter", "Keine Skripte vorhanden.")
+            return
+        quelle = simpledialog.askstring(
+            "Speichern unter", "Vorhandenes Skript (Quelle):\n%s" % ", ".join(namen))
+        if not quelle:
+            return
+        if quelle not in namen:
+            messagebox.showerror("Speichern unter", "Skript '%s' nicht gefunden." % quelle)
+            return
+        ziel = simpledialog.askstring("Speichern unter", "Neuer Name:")
+        if not ziel:
+            return
+        ziel = ziel.strip()
+        if not ziel or any(z in ziel for z in ("/", "\\", "..")):
+            messagebox.showerror("Speichern unter", "Ungueltiger Name.")
+            return
+        try:
+            schritte = aktion_skript.skript_laden(quelle)
+        except Exception as e:
+            messagebox.showerror("Speichern unter", "Konnte '%s' nicht laden: %s" % (quelle, e))
+            return
+        aktion_skript.skript_speichern(ziel, schritte)
+        self._log_makro("Skript '%s' als '%s' gespeichert." % (quelle, ziel))
+        self._makro_liste_neu_aufbauen()
+        self._refresh_fish_makro_combo()
+
+    def _makro_status_polling(self):
+        """Aktualisiert alle Status-Labels/Buttons periodisch (1x/s) anhand
+        von makro_manager.laufende_makros() - laeuft dauerhaft ueber
+        self.root.after() weiter (die Zeilen existieren fuer die gesamte
+        Lebensdauer des Fensters, kein Abschalten noetig).
+
+        Gruppiert nach 'basis_name' statt 'name' (instanz_key), da bei einem
+        "Alle Fenster"-Fan-out (siehe _makro_start()/
+        makro_manager.starte_makro_alle_fenster()) MEHRERE Instanzen
+        DESSELBEN Skripts gleichzeitig laufen koennen, aber genau EINE Zeile
+        im MAKRO TOOLS-Reiter dafuer existiert - die Zeile zeigt in dem Fall
+        alle laufenden Fenster-Instanzen zusammengefasst an."""
+        instanzen_je_skript = {}
+        for e in self.makro_manager.laufende_makros():
+            instanzen_je_skript.setdefault(e["basis_name"], []).append(e)
+
+        for name, widgets in self._makro_zeilen_widgets.items():
+            instanzen = instanzen_je_skript.get(name, [])
+            laufende = [e for e in instanzen if e["laeuft"]]
+
+            if not laufende:
+                if instanzen:
+                    text = instanzen[-1]["status"].lower()
+                else:
+                    text = "gestoppt"
+                widgets["status_label"].config(text=text, foreground="#a6adc8")
+                widgets["btn_start"].config(state="normal")
+                widgets["btn_stop"].config(state="disabled")
+                widgets["btn_loeschen"].config(state="normal")
+            else:
+                if len(laufende) == 1 and laufende[0]["fenster_label"] is None:
+                    text = "laeuft (%s, %.0fs)" % (laufende[0]["prioritaet"], laufende[0]["laufzeit_s"])
+                else:
+                    text = "laeuft: " + ", ".join(
+                        "%s (%.0fs)" % (e["fenster_label"] or "?", e["laufzeit_s"]) for e in laufende)
+                widgets["status_label"].config(text=text, foreground="#a6e3a1")
+                widgets["btn_start"].config(state="disabled")
+                widgets["btn_stop"].config(state="normal")
+                widgets["btn_loeschen"].config(state="disabled")
+        self.root.after(1000, self._makro_status_polling)
+
+    def _log_makro(self, msg):
+        """Schreibt eine Zeile ins MAKRO TOOLS-Log. Muss aufrufbar sein,
+        BEVOR die GUI-Widgets existieren (self.makro_manager wird in
+        __init__() bereits mit dieser Methode als log-Callback erzeugt,
+        lange vor _build_makro_tab()) UND aus einem Nicht-GUI-Thread heraus
+        (Makro-Threads in makro_manager.py) - deshalb hasattr()-Fallback auf
+        print() plus root.after()-Marshalling fuer den Widget-Zugriff."""
+        zeile = "[%s] %s\n" % (datetime.now().strftime("%H:%M:%S"), msg)
+        if not hasattr(self, "makro_log"):
+            print(zeile, end="")
+            return
+
+        def schreiben():
+            self.makro_log.insert("end", zeile)
+            self.makro_log.see("end")
+        self.root.after(0, schreiben)
 
     # ---------- CONFIG / ARDUINO ----------
     def _build_config_tab(self):

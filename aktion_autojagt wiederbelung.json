@@ -1,0 +1,118 @@
+{
+  "name": "autojagt wiederbelung",
+  "schritte": [
+    {
+      "aktion": "BILD_WARTEN_BIS",
+      "parameter": {
+        "bild": "WIEDERBELEBEN.png",
+        "variante": "",
+        "timeout": 5.0,
+        "endlos": 1,
+        "schwelle": 0.7
+      },
+      "bei_fehler_override": "WEITER"
+    },
+    {
+      "aktion": "SCHLEIFE_START",
+      "parameter": {
+        "wiederholungen": 3,
+        "endlos": 1
+      }
+    },
+    {
+      "aktion": "BILD_KLICKEN_BIS",
+      "parameter": {
+        "bild": "WIEDERBELEBEN.png",
+        "variante": "",
+        "modus": "BILD_WEG",
+        "ziel_bild": "WIEDERBELEBEN.png",
+        "ziel_variante": "",
+        "klick_typ": "L",
+        "zufall": 1,
+        "offset_x": 0,
+        "offset_y": 0,
+        "klickabstand": 1.0,
+        "timeout": 30.0,
+        "endlos": 1,
+        "schwelle": 0.7
+      }
+    },
+    {
+      "aktion": "WARTEN",
+      "parameter": {
+        "sekunden": 3.0,
+        "bonus_prozent": 40.0
+      }
+    },
+    {
+      "aktion": "BILD_KLICKEN_BIS",
+      "parameter": {
+        "bild": "AUTOJAGT BALKEN.png",
+        "variante": "",
+        "modus": "ZIEL_DA",
+        "ziel_bild": "AUTOJAGT SYMBOL.png",
+        "ziel_variante": "",
+        "klick_typ": "L",
+        "zufall": 1,
+        "offset_x": 0,
+        "offset_y": 0,
+        "klickabstand": 1.0,
+        "timeout": 30.0,
+        "endlos": 1,
+        "schwelle": 0.7
+      }
+    },
+    {
+      "aktion": "WARTEN",
+      "parameter": {
+        "sekunden": 1.0,
+        "bonus_prozent": 0
+      }
+    },
+    {
+      "aktion": "BILD_KLICKEN_BIS",
+      "parameter": {
+        "bild": "AUTOJAGT SYMBOL.png",
+        "variante": "",
+        "modus": "ZIEL_DA",
+        "ziel_bild": "AUTZOJAGTFESNSTER.png",
+        "ziel_variante": "",
+        "klick_typ": "L",
+        "zufall": 1,
+        "offset_x": 0,
+        "offset_y": 0,
+        "klickabstand": 2.0,
+        "timeout": 30.0,
+        "endlos": 1,
+        "schwelle": 0.7
+      }
+    },
+    {
+      "aktion": "WARTEN",
+      "parameter": {
+        "sekunden": 1.0,
+        "bonus_prozent": 0
+      }
+    },
+    {
+      "aktion": "BILD_KLICKEN",
+      "parameter": {
+        "bild": "AUTZOJAGTFESNSTER.png",
+        "variante": "AUTZOJAGTFESNSTER",
+        "klick_typ": "L",
+        "zufall": 1,
+        "offset_x": 0,
+        "offset_y": 0,
+        "timeout": 5.0,
+        "endlos": 0,
+        "schwelle": 0.7
+      },
+      "bei_fehler_override": "SPRUNG",
+      "sprung_ziel_override": "6"
+    },
+    {
+      "aktion": "SCHLEIFE_ENDE",
+      "parameter": {}
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "name": "ANGELnsetup",
+  "schritte": [
+    {
+      "aktion": "SCHLEIFE_START",
+      "parameter": {
+        "wiederholungen": 3,
+        "endlos": 1
+      }
+    },
+    {
+      "aktion": "BILD_KLICKEN",
+      "parameter": {
+        "bild": "wurm reihe inventa.png",
+        "variante": "wurm reihe inventa",
+        "klick_typ": "D",
+        "zufall": 0,
+        "offset_x": 0,
+        "offset_y": 0,
+        "timeout": 5.0,
+        "endlos": 0,
+        "schwelle": 0.7
+      }
+    },
+    {
+      "aktion": "BILD_KLICKEN",
+      "parameter": {
+        "bild": "Angel symbol.png",
+        "variante": "",
+        "klick_typ": "R",
+        "zufall": 0,
+        "offset_x": 0,
+        "offset_y": 0,
+        "timeout": 5.0,
+        "endlos": 0,
+        "schwelle": 0.7
+      }
+    },
+    {
+      "aktion": "BILD_WARTEN_BIS",
+      "parameter": {
+        "bild": "Poop Up.png",
+        "variante": "Poop Up",
+        "timeout": 5.0,
+        "endlos": 0,
+        "schwelle": 0.7
+      },
+      "bei_fehler_override": "SPRUNG",
+      "sprung_ziel_override": "1"
+    },
+    {
+      "aktion": "WARTEN",
+      "parameter": {
+        "sekunden": 0.5,
+        "bonus_prozent": 0
+      },
+      "bei_fehler_override": "ABBRECHEN"
+    },
+    {
+      "aktion": "BILD_WARTEN_BIS_WEG",
+      "parameter": {
+        "bild": "Poop Up.png",
+        "variante": "Poop Up",
+        "timeout": 5.0,
+        "endlos": 1,
+        "schwelle": 0.7
+      }
+    },
+    {
+      "aktion": "BILD_KLICKEN",
+      "parameter": {
+        "bild": "Angelrutte.png",
+        "variante": "Angelrutte",
+        "klick_typ": "D",
+        "zufall": 0,
+        "offset_x": 0,
+        "offset_y": 0,
+        "timeout": 5.0,
+        "endlos": 0,
+        "schwelle": 0.7
+      }
+    },
+    {
+      "aktion": "BILD_KLICKEN",
+      "parameter": {
+        "bild": "Angelrutte.png",
+        "variante": "Angelrutte",
+        "klick_typ": "D",
+        "zufall": 0,
+        "offset_x": 0,
+        "offset_y": 0,
+        "timeout": 5.0,
+        "endlos": 0,
+        "schwelle": 0.7
+      }
+    },
+    {
+      "aktion": "SCHLEIFE_ENDE",
+      "parameter": {},
+      "bei_fehler_override": "SPRUNG",
+      "sprung_ziel_override": "1"
+    }
+  ]
+}

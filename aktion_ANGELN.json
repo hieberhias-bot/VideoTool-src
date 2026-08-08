@@ -1,0 +1,82 @@
+{
+  "name": "ANGELN",
+  "schritte": [
+    {
+      "aktion": "SCHLEIFE_START",
+      "parameter": {
+        "wiederholungen": 3,
+        "endlos": 1
+      }
+    },
+    {
+      "aktion": "BILD_KLICKEN_BIS",
+      "parameter": {
+        "bild": "WUEM INVI.png",
+        "variante": "",
+        "modus": "ZIEL_DA",
+        "ziel_bild": "wurm am HACKEN.png",
+        "ziel_variante": "",
+        "klick_typ": "D",
+        "zufall": 0,
+        "offset_x": 0,
+        "offset_y": 0,
+        "klickabstand": 1.0,
+        "timeout": 30.0,
+        "endlos": 0,
+        "schwelle": 0.7,
+        "suchbereich": null,
+        "ziel_suchbereich": null
+      }
+    },
+    {
+      "aktion": "BILD_KLICKEN_BIS",
+      "parameter": {
+        "bild": "Angel symbol.png",
+        "variante": "",
+        "modus": "ZIEL_DA",
+        "ziel_bild": "Poop Up.png",
+        "ziel_variante": "Poop Up",
+        "klick_typ": "R",
+        "zufall": 0,
+        "offset_x": 0,
+        "offset_y": 0,
+        "klickabstand": 3.0,
+        "timeout": 30.0,
+        "endlos": 0,
+        "schwelle": 0.7,
+        "suchbereich": null,
+        "ziel_suchbereich": null
+      }
+    },
+    {
+      "aktion": "BILD_WARTEN_BIS_WEG",
+      "parameter": {
+        "bild": "Poop Up.png",
+        "variante": "Poop Up",
+        "timeout": 5.0,
+        "endlos": 0,
+        "schwelle": 0.7,
+        "suchbereich": null
+      }
+    },
+    {
+      "aktion": "BILD_KLICKEN",
+      "parameter": {
+        "bild": "Angelrutte.png",
+        "variante": "",
+        "klick_typ": "R",
+        "zufall": 0,
+        "offset_x": 0,
+        "offset_y": 0,
+        "timeout": 5.0,
+        "endlos": 0,
+        "schwelle": 0.7,
+        "suchbereich": null
+      }
+    },
+    {
+      "aktion": "SCHLEIFE_ENDE",
+      "parameter": {}
+    }
+  ]
+}
